@@ -4,7 +4,6 @@ import (
 	"context"
 	"github.com/Deansquirrel/goToolCommon"
 	"github.com/Deansquirrel/goZ9MdDataTrans/object"
-	"sync"
 )
 
 const (
@@ -28,7 +27,7 @@ var SysConfig *object.SystemConfig
 var TaskList goToolCommon.IObjectManager
 
 var TaskKeyList []object.TaskKey
-var TaskSyncLockList map[object.TaskKey]*sync.Mutex
+var TaskTicket map[object.TaskKey]chan struct{}
 
 func TaskKeyListInit() {
 	TaskKeyList = make([]object.TaskKey, 0)
@@ -46,10 +45,11 @@ func TaskKeyListInit() {
 	}
 
 	//任务锁（同一任务不可并行）
-	TaskSyncLockList = make(map[object.TaskKey]*sync.Mutex)
+	TaskTicket = make(map[object.TaskKey]chan struct{})
 	for _, k := range TaskKeyList {
-		var syncL sync.Mutex
-		TaskSyncLockList[k] = &syncL
+		ch := make(chan struct{}, 1)
+		TaskTicket[k] = ch
+		ch <- struct{}{}
 	}
 }
 

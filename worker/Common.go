@@ -52,7 +52,6 @@ func (c *common) StartWorker(key object.TaskKey) {
 	global.TaskList.Register() <- goToolCommon.NewObject(string(s.Key), s)
 
 	errCh := make(chan error)
-	stateCh := make(chan bool)
 
 	go func() {
 		defer func() {
@@ -62,10 +61,9 @@ func (c *common) StartWorker(key object.TaskKey) {
 				log.Error(string(debug.Stack()))
 			}
 		}()
-		defer func() {
-			close(errCh)
-			close(stateCh)
-		}()
+		//defer func() {
+		//	close(errCh)
+		//}()
 		for {
 			select {
 			case err := <-errCh:
@@ -87,16 +85,6 @@ func (c *common) StartWorker(key object.TaskKey) {
 				}
 				if cs != nil {
 					cs.Err = err
-				}
-			case b := <-stateCh:
-				s := global.TaskList.GetObject(string(key))
-				if s == nil {
-					errCh <- errors.New(fmt.Sprintf("task %s err: task state is empty", key))
-					return
-				}
-				cs := s.(*object.TaskState)
-				if cs != nil {
-					cs.Working = b
 				}
 			case <-s.Ctx.Done():
 				return
@@ -124,36 +112,7 @@ func (c *common) StartWorker(key object.TaskKey) {
 	}
 	s.CronStr = cronStr
 	cr := cron.New()
-	err = cr.AddFunc(s.CronStr, func() {
-		guid := goToolCommon.Guid()
-		log.Debug(fmt.Sprintf("task %s[%s] start", key, guid))
-
-		defer func() {
-			//错误处理（panic）
-			err := recover()
-			if err != nil {
-				errMsg := fmt.Sprintf("task recover get err: %s", err)
-				log.Error(errMsg)
-				log.Error(string(debug.Stack()))
-				//errCh <- errors.New(errMsg)
-				c.sendMsg(errMsg)
-			}
-			log.Debug(fmt.Sprintf("task %s[%s] complete", key, guid))
-		}()
-
-		global.TaskSyncLockList[key].Lock()
-		defer global.TaskSyncLockList[key].Unlock()
-
-		f := c.getWorkerFunc(s.Key, errCh, stateCh)
-		if f != nil {
-			f()
-		} else {
-			errMsg := fmt.Sprintf("task %s[%s] start err: func is nil", key, guid)
-			log.Error(errMsg)
-			errCh <- errors.New(errMsg)
-			return
-		}
-	})
+	err = cr.AddFunc(s.CronStr, c.getWorkerFuncReal(key, errCh))
 	if err != nil {
 		errCh <- err
 		return
@@ -182,14 +141,59 @@ func (c *common) StopWorker(key object.TaskKey) {
 	}
 }
 
+func (c *common) getWorkerFuncReal(key object.TaskKey, errCh chan<- error) func() {
+	return func() {
+		guid := goToolCommon.Guid()
+		ticketCh := global.TaskTicket[key]
+		if ticketCh == nil {
+			log.Warn(fmt.Sprintf("ticket chan is nil, task key: %s", key))
+			return
+		}
+
+		defer func() {
+			//错误处理（panic）
+			err := recover()
+			if err != nil {
+				errMsg := fmt.Sprintf("task recover get err: %s", err)
+				log.Error(errMsg)
+				log.Error(string(debug.Stack()))
+				//errCh <- errors.New(errMsg)
+				c.sendMsg(errMsg)
+			}
+			log.Debug(fmt.Sprintf("task %s[%s] complete", key, guid))
+		}()
+
+		select {
+		case <-ticketCh:
+			log.Debug(fmt.Sprintf("task %s[%s] start", key, guid))
+			defer func() {
+				ticketCh <- struct{}{}
+			}()
+		default:
+			log.Warn(fmt.Sprintf("task %s[%s] chan is empty, ignor", key, guid))
+			return
+		}
+
+		f := c.getWorkerFunc(key, errCh)
+		if f != nil {
+			f()
+		} else {
+			errMsg := fmt.Sprintf("task %s[%s] start err: func is nil", key, guid)
+			log.Error(errMsg)
+			errCh <- errors.New(errMsg)
+			return
+		}
+	}
+}
+
 //获取任务执行函数
-func (c *common) getWorkerFunc(key object.TaskKey, errCh chan<- error, stateCh chan<- bool) func() {
+func (c *common) getWorkerFunc(key object.TaskKey, errCh chan<- error) func() {
 	//TODO 获取任务执行函数
 	switch key {
 	case object.TaskKeyRefreshConfig:
-		return NewCommonWorker(errCh, stateCh).RefreshConfig
+		return NewCommonWorker(errCh).RefreshConfig
 	case object.TaskKeyRefreshHeartBeat:
-		return NewOnlineWorker(errCh, stateCh).RefreshHeartBeat
+		return NewOnlineWorker(errCh).RefreshHeartBeat
 	default:
 		return nil
 	}

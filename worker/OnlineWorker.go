@@ -7,14 +7,12 @@ import (
 )
 
 type onlineWorker struct {
-	errChan   chan<- error //错误通知通道
-	stateChan chan<- bool  //运行状态变更通道
+	errChan chan<- error //错误通知通道
 }
 
-func NewOnlineWorker(errChan chan<- error, stateChan chan<- bool) *onlineWorker {
+func NewOnlineWorker(errChan chan<- error) *onlineWorker {
 	return &onlineWorker{
-		errChan:   errChan,
-		stateChan: stateChan,
+		errChan: errChan,
 	}
 }
 

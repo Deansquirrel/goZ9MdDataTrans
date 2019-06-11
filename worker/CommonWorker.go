@@ -1,7 +1,6 @@
 package worker
 
 import (
-	"errors"
 	"fmt"
 	"github.com/Deansquirrel/goZ9MdDataTrans/global"
 	"github.com/Deansquirrel/goZ9MdDataTrans/object"
@@ -9,30 +8,23 @@ import (
 )
 
 type commonWorker struct {
-	errCh   chan<- error //错误通知通道
-	stateCh chan<- bool  //运行状态变更通道
+	errCh chan<- error //错误通知通道
 }
 
-func NewCommonWorker(errCh chan<- error, stateCh chan<- bool) *commonWorker {
+func NewCommonWorker(errCh chan<- error) *commonWorker {
 	return &commonWorker{
-		errCh:   errCh,
-		stateCh: stateCh,
+		errCh: errCh,
 	}
 }
 
 //刷新并检查任务配置
 func (w *commonWorker) RefreshConfig() {
-	w.stateCh <- true
-
 	var err error
 	isSelfChange := false
 
 	defer func() {
-		if !isSelfChange {
-			w.stateCh <- false
-			if err == nil {
-				w.errCh <- nil
-			}
+		if !isSelfChange && err == nil {
+			w.errCh <- nil
 		}
 	}()
 
@@ -48,6 +40,8 @@ func (w *commonWorker) RefreshConfig() {
 	for _, id := range idList {
 		if id == object.TaskKeyRefreshConfig {
 			isSelfChange = true
+		} else {
+			isSelfChange = false
 		}
 		t := global.TaskList.GetObject(string(id))
 		if t == nil {
@@ -64,12 +58,7 @@ func (w *commonWorker) RefreshConfig() {
 				w.restartWorker(id)
 				return
 			}
-			ws, err := w.getTaskWorkState(id)
-			if err != nil {
-				w.errCh <- err
-				continue
-			}
-			if !ws {
+			if !w.isTaskRunning(id) {
 				w.restartWorker(id)
 			}
 		}
@@ -82,11 +71,23 @@ func (w *commonWorker) restartWorker(key object.TaskKey) {
 	comm.StartWorker(key)
 }
 
-func (w *commonWorker) getTaskWorkState(key object.TaskKey) (bool, error) {
-	s := global.TaskList.GetObject(string(key))
-	if s == nil {
-		return false, errors.New(fmt.Sprintf("task %s err: task state is empty", key))
+func (w *commonWorker) isTaskRunning(key object.TaskKey) bool {
+	for k, ch := range global.TaskTicket {
+		if k == key {
+			if len(ch) > 0 {
+				return false
+			} else {
+				return true
+			}
+		}
 	}
-	cs := s.(*object.TaskState)
-	return cs.Working, nil
+	fmt.Println("fsssssssssssssssssssssssssssssssssssssssssssssssssssss")
+	return false
+
+	//s := global.TaskList.GetObject(string(key))
+	//if s == nil {
+	//	return false, errors.New(fmt.Sprintf("task %s err: task state is empty", key))
+	//}
+	//cs := s.(*object.TaskState)
+	//return cs.Working, nil
 }
