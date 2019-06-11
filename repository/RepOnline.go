@@ -79,3 +79,9 @@ func (r *repOnline) GetTaskCronList() ([]*object.TaskCron, error) {
 	}
 	return resultList, nil
 }
+
+//刷新心跳
+func (r *repOnline) UpdateHeartBeat(company *object.ZlCompany) error {
+	//TODO 刷新心跳
+	return nil
+}

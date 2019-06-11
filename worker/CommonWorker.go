@@ -1,6 +1,8 @@
 package worker
 
 import (
+	"errors"
+	"fmt"
 	"github.com/Deansquirrel/goZ9MdDataTrans/global"
 	"github.com/Deansquirrel/goZ9MdDataTrans/object"
 	"github.com/Deansquirrel/goZ9MdDataTrans/repository"
@@ -20,6 +22,20 @@ func NewCommonWorker(errCh chan<- error, stateCh chan<- bool) *commonWorker {
 
 //刷新并检查任务配置
 func (w *commonWorker) RefreshConfig() {
+	w.stateCh <- true
+
+	var err error
+	isSelfChange := false
+
+	defer func() {
+		if !isSelfChange {
+			w.stateCh <- false
+			if err == nil {
+				w.errCh <- nil
+			}
+		}
+	}()
+
 	repOnline, err := repository.NewRepOnline()
 	if err != nil {
 		w.errCh <- err
@@ -28,7 +44,11 @@ func (w *commonWorker) RefreshConfig() {
 
 	comm := NewCommon()
 	idList := global.TaskKeyList
+
 	for _, id := range idList {
+		if id == object.TaskKeyRefreshConfig {
+			isSelfChange = true
+		}
 		t := global.TaskList.GetObject(string(id))
 		if t == nil {
 			comm.StartWorker(id)
@@ -40,11 +60,33 @@ func (w *commonWorker) RefreshConfig() {
 		}
 		ts := t.(*object.TaskState)
 		if configCron != ts.CronStr {
-			comm.StopWorker(id)
-			comm.StartWorker(id)
+			if isSelfChange {
+				w.restartWorker(id)
+				return
+			}
+			ws, err := w.getTaskWorkState(id)
+			if err != nil {
+				w.errCh <- err
+				continue
+			}
+			if !ws {
+				w.restartWorker(id)
+			}
 		}
 	}
-	if err == nil {
-		w.errCh <- nil
+}
+
+func (w *commonWorker) restartWorker(key object.TaskKey) {
+	comm := NewCommon()
+	comm.StopWorker(key)
+	comm.StartWorker(key)
+}
+
+func (w *commonWorker) getTaskWorkState(key object.TaskKey) (bool, error) {
+	s := global.TaskList.GetObject(string(key))
+	if s == nil {
+		return false, errors.New(fmt.Sprintf("task %s err: task state is empty", key))
 	}
+	cs := s.(*object.TaskState)
+	return cs.Working, nil
 }

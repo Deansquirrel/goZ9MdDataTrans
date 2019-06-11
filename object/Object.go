@@ -3,6 +3,7 @@ package object
 import (
 	"context"
 	"github.com/robfig/cron"
+	"time"
 )
 
 type TaskState struct {
@@ -29,4 +30,15 @@ type DingTalkRobotConfigData struct {
 	FWebHookKey string
 	FAtMobiles  string
 	FIsAtAll    int
+}
+
+//ZlCompany
+type ZlCompany struct {
+	FCoId          int       //分支机构ID
+	FCoAb          string    //名称
+	FCoCode        string    //通道码
+	FCoUserAb      string    //主名称
+	FCoUserCode    string    //主代码
+	FCoFunc        int       //系统类型
+	FCoAccStartDay time.Time //建账营业日
 }

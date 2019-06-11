@@ -43,6 +43,7 @@ func (c *common) StartWorker(key object.TaskKey) {
 
 	syncLock.Lock()
 	defer syncLock.Unlock()
+
 	task := global.TaskList.GetObject(string(s.Key))
 	if task != nil {
 		return
@@ -55,14 +56,15 @@ func (c *common) StartWorker(key object.TaskKey) {
 
 	go func() {
 		defer func() {
-			close(errCh)
-			close(stateCh)
-
 			err := recover()
 			if err != nil {
 				log.Error(fmt.Sprintf("task %s recover err: %s", key, err))
 				log.Error(string(debug.Stack()))
 			}
+		}()
+		defer func() {
+			close(errCh)
+			close(stateCh)
 		}()
 		for {
 			select {
@@ -74,7 +76,8 @@ func (c *common) StartWorker(key object.TaskKey) {
 				}
 				cs := s.(*object.TaskState)
 				if err != nil {
-					c.errHandle(err)
+					//c.errHandle(err)
+					c.sendMsg(err.Error())
 				} else {
 					if cs != nil && cs.Err != nil {
 						msg := fmt.Sprintf("Task resume %s", key)
@@ -126,21 +129,20 @@ func (c *common) StartWorker(key object.TaskKey) {
 		log.Debug(fmt.Sprintf("task %s[%s] start", key, guid))
 
 		defer func() {
-			global.TaskSyncLockList[key].Unlock()
-			stateCh <- false
 			//错误处理（panic）
 			err := recover()
 			if err != nil {
 				errMsg := fmt.Sprintf("task recover get err: %s", err)
 				log.Error(errMsg)
 				log.Error(string(debug.Stack()))
-				errCh <- errors.New(errMsg)
+				//errCh <- errors.New(errMsg)
+				c.sendMsg(errMsg)
 			}
 			log.Debug(fmt.Sprintf("task %s[%s] complete", key, guid))
 		}()
 
-		stateCh <- true
 		global.TaskSyncLockList[key].Lock()
+		defer global.TaskSyncLockList[key].Unlock()
 
 		f := c.getWorkerFunc(s.Key, errCh, stateCh)
 		if f != nil {
@@ -186,6 +188,8 @@ func (c *common) getWorkerFunc(key object.TaskKey, errCh chan<- error, stateCh c
 	switch key {
 	case object.TaskKeyRefreshConfig:
 		return NewCommonWorker(errCh, stateCh).RefreshConfig
+	case object.TaskKeyRefreshHeartBeat:
+		return NewOnlineWorker(errCh, stateCh).RefreshHeartBeat
 	default:
 		return nil
 	}
@@ -235,5 +239,13 @@ func (c *common) sendMsg(msg string) {
 	sendErr := dt.SendMsg(msg)
 	if sendErr != nil {
 		log.Error(fmt.Sprintf("send msg error,msg: %s, error: %s", msg, sendErr.Error()))
+	}
+}
+
+func (c *common) HandlePanic() {
+	err := recover()
+	if err != nil {
+		log.Error(fmt.Sprintf("recover get err: %s", err))
+		log.Error(string(debug.Stack()))
 	}
 }
