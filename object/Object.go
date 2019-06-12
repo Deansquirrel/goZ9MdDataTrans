@@ -28,3 +28,11 @@ type ZlCompany struct {
 	FCoFunc        int       //系统类型
 	FCoAccStartDay time.Time //建账营业日
 }
+
+type MdYyInfo struct {
+	FMdId    int
+	FYyr     time.Time
+	FTc      int
+	FSr      float32
+	FOprTime time.Time
+}

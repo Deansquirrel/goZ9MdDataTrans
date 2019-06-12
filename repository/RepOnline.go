@@ -3,6 +3,7 @@ package repository
 import (
 	"errors"
 	"fmt"
+	"github.com/Deansquirrel/goToolCommon"
 	"github.com/Deansquirrel/goToolMSSql"
 	"github.com/Deansquirrel/goZ9MdDataTrans/object"
 )
@@ -13,6 +14,23 @@ const (
 	sqlGetTaskCronList = "" +
 		"SELECT [taskkey],[taskdescription],[cron] " +
 		"FROM [taskcron]"
+
+	sqlRefreshHeartBeat = "" +
+		"IF EXISTS (SELECT * FROM [heartbeat] WHERE [mdid] = ?) " +
+		"BEGIN " +
+		"UPDATE [heartbeat] " +
+		"SET [heartbeat] = getDate() " +
+		"WHERE [mdid] = ? " +
+		"END " +
+		"ELSE " +
+		"BEGIN " +
+		"INSERT INTO [heartbeat]([mdid],[mdname],[heartbeat]) " +
+		"SELECT ?,?,getDate() " +
+		"END"
+
+	sqlUpdateMdYyInfo = "" +
+		"INSERT INTO [mdyyinfo]([mdid],[yyr],[tc],[sr],[oprtime]) " +
+		"VALUES(?,?,?,?,?)"
 )
 
 type repOnline struct {
@@ -82,6 +100,21 @@ func (r *repOnline) GetTaskCronList() ([]*object.TaskCron, error) {
 
 //刷新心跳
 func (r *repOnline) UpdateHeartBeat(company *object.ZlCompany) error {
-	//TODO 刷新心跳
-	return nil
+	if company == nil {
+		errMsg := "company is nil"
+		log.Error(errMsg)
+		return errors.New(errMsg)
+	}
+	comm := NewCommon()
+	return comm.SetRowsBySQL(r.dbConfig, sqlRefreshHeartBeat, company.FCoId, company.FCoId, company.FCoId, company.FCoAb)
+}
+
+func (r *repOnline) UpdateMdYyInfo(info *object.MdYyInfo) error {
+	comm := NewCommon()
+	return comm.SetRowsBySQL(r.dbConfig, sqlUpdateMdYyInfo,
+		info.FMdId,
+		goToolCommon.GetDateStr(info.FYyr),
+		fmt.Sprintf("%v", info.FTc),
+		fmt.Sprintf("%v", info.FSr),
+		goToolCommon.GetDateTimeStr(info.FOprTime))
 }

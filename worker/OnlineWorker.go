@@ -24,25 +24,59 @@ func (w *onlineWorker) RefreshHeartBeat() {
 	repMd := repository.NewRepMd()
 	zlCompany, err := repMd.GetZlCompany()
 	if err != nil {
-		w.comm.HandleErr(object.TaskKeyRefreshHeartBeat, err)
+		w.refreshHeartBeatHandleErr(err)
 		return
 	}
 	if zlCompany == nil {
 		errMsg := "ZlCompany is nil"
-		w.comm.HandleErr(object.TaskKeyRefreshHeartBeat, errors.New(errMsg))
+		w.refreshHeartBeatHandleErr(errors.New(errMsg))
 		return
 	}
 	repOnline, err := repository.NewRepOnline()
 	if err != nil {
-		w.comm.HandleErr(object.TaskKeyRefreshHeartBeat, err)
+		w.refreshHeartBeatHandleErr(err)
 		return
 	}
 	if repOnline == nil {
 		if zlCompany == nil {
 			errMsg := "repOnline is nil"
-			w.comm.HandleErr(object.TaskKeyRefreshHeartBeat, errors.New(errMsg))
+			w.refreshHeartBeatHandleErr(errors.New(errMsg))
 			return
 		}
 	}
-	w.comm.HandleErr(object.TaskKeyRefreshHeartBeat, repOnline.UpdateHeartBeat(zlCompany))
+	err = repOnline.UpdateHeartBeat(zlCompany)
+	if err != nil {
+		w.refreshHeartBeatHandleErr(err)
+		return
+	}
+}
+
+func (w *onlineWorker) refreshHeartBeatHandleErr(err error) {
+	w.comm.HandleErr(object.TaskKeyRefreshHeartBeat, err)
+}
+
+func (w *onlineWorker) UpdateMdYyInfo() {
+	log.Debug("刷新门店营业信息")
+	repMd := repository.NewRepMd()
+	repOnline, err := repository.NewRepOnline()
+	if err != nil {
+		w.updateMdYyInfoHandleErr(err)
+		return
+	}
+	list, err := repMd.GetMdYyInfo()
+	if err != nil {
+		w.updateMdYyInfoHandleErr(err)
+		return
+	}
+
+	for _, info := range list {
+		err = repOnline.UpdateMdYyInfo(info)
+		if err != nil {
+			w.updateMdYyInfoHandleErr(err)
+		}
+	}
+}
+
+func (w *onlineWorker) updateMdYyInfoHandleErr(err error) {
+	w.comm.HandleErr(object.TaskKeyRefreshMdYyInfo, err)
 }
