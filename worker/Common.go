@@ -87,6 +87,8 @@ func (c *common) getWorkerFunc(key object.TaskKey) func() {
 		return NewOnlineWorker().RefreshHeartBeat
 	case object.TaskKeyRefreshMdYyInfo:
 		return NewOnlineWorker().UpdateMdYyInfo
+	case object.TaskKeyRefreshZxKc:
+		return NewOnlineWorker().UpdateZxKc
 	default:
 		return nil
 	}

@@ -17,20 +17,37 @@ const (
 
 	sqlRefreshHeartBeat = "" +
 		"IF EXISTS (SELECT * FROM [heartbeat] WHERE [mdid] = ?) " +
-		"BEGIN " +
-		"UPDATE [heartbeat] " +
-		"SET [heartbeat] = getDate() " +
-		"WHERE [mdid] = ? " +
-		"END " +
+		"	BEGIN " +
+		"		UPDATE [heartbeat] " +
+		"		SET [heartbeat] = getDate() " +
+		"		WHERE [mdid] = ? " +
+		"	END " +
 		"ELSE " +
-		"BEGIN " +
-		"INSERT INTO [heartbeat]([mdid],[mdname],[heartbeat]) " +
-		"SELECT ?,?,getDate() " +
-		"END"
+		"	BEGIN " +
+		"		INSERT INTO [heartbeat]([mdid],[mdname],[heartbeat]) " +
+		"		SELECT ?,?,getDate() " +
+		"	END"
 
 	sqlUpdateMdYyInfo = "" +
 		"INSERT INTO [mdyyinfo]([mdid],[yyr],[tc],[sr],[oprtime]) " +
 		"VALUES(?,?,?,?,?)"
+
+	sqlUpdateZxKc = "" +
+		"INSERT INTO [zxkc]([mdid],[hpid],[sl],[oprtime]) " +
+		"VALUES (?,?,?,getDate())"
+
+	sqlUpdateKcLastUpdate = "" +
+		"IF EXISTS (SELECT * FROM [kclastupdate] WHERE [mdid]=?)  " +
+		"	BEGIN " +
+		"		UPDATE [kclastupdate] " +
+		"		SET [lastupdate] = getDate() " +
+		"		WHERE [mdid] = ? " +
+		"	END " +
+		"ELSE " +
+		"	BEGIN " +
+		"		INSERT INTO [kclastupdate]([mdid],[lastupdate]) " +
+		"		VALUES (?,getDate()) " +
+		"	END"
 )
 
 type repOnline struct {
@@ -74,6 +91,9 @@ func (r *repOnline) GetTaskCronList() ([]*object.TaskCron, error) {
 	if err != nil {
 		return nil, err
 	}
+	defer func() {
+		_ = rows.Close()
+	}()
 	resultList := make([]*object.TaskCron, 0)
 	var key object.TaskKey
 	var desc, cron string
@@ -117,4 +137,25 @@ func (r *repOnline) UpdateMdYyInfo(info *object.MdYyInfo) error {
 		fmt.Sprintf("%v", info.FTc),
 		fmt.Sprintf("%v", info.FSr),
 		goToolCommon.GetDateTimeStr(info.FOprTime))
+}
+
+func (r *repOnline) UpdateZxKc(fMdId int, kcList []*object.ZxKc) error {
+	comm := NewCommon()
+	var err error
+	for _, kc := range kcList {
+		err = comm.SetRowsBySQL(r.dbConfig, sqlUpdateZxKc,
+			fMdId,
+			kc.FHpId,
+			fmt.Sprintf("%v", kc.FSl))
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (r *repOnline) UpdateKcLastUpdate(mdId int) error {
+	comm := NewCommon()
+	return comm.SetRowsBySQL(r.dbConfig, sqlUpdateKcLastUpdate,
+		mdId, mdId, mdId)
 }

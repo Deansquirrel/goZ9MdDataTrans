@@ -3,6 +3,7 @@ package repository
 import (
 	"errors"
 	"fmt"
+	"github.com/Deansquirrel/goToolCommon"
 	"github.com/Deansquirrel/goToolMSSql2000"
 	"github.com/Deansquirrel/goZ9MdDataTrans/object"
 	"time"
@@ -20,6 +21,11 @@ const (
 		"SELECT [ckmdid],[ckyyr],sum(case when [ckcxbj]=1 then -1 else 1 end) as [num],sum([ckcjje]) as [srmy] " +
 		"FROM [z3xsckt] WITH(NOLOCK) " +
 		"GROUP BY [ckmdid],[ckyyr]"
+
+	sqlGetZxKcInfo = "" +
+		"SELECT [tzhpid],[tzsl],[tzbdsj] " +
+		"FROM [z3xttz] " +
+		"WHERE [tzckid] = 0 AND [tzbdsj] > ?"
 )
 
 type repMd struct {
@@ -42,6 +48,10 @@ func (r *repMd) GetZlCompany() (*object.ZlCompany, error) {
 		log.Error(errMsg)
 		return nil, errors.New(errMsg)
 	}
+
+	defer func() {
+		_ = rows.Close()
+	}()
 
 	var fCoId, fCoFunc int
 	var fCoAb, fCoCode, fCoUserAb, fCoUserCode string
@@ -86,6 +96,9 @@ func (r *repMd) GetMdYyInfo() ([]*object.MdYyInfo, error) {
 		log.Error(errMsg)
 		return nil, errors.New(errMsg)
 	}
+	defer func() {
+		_ = rows.Close()
+	}()
 	var fYyr time.Time
 	var fMdId, fTc int
 	var fSr float32
@@ -111,4 +124,43 @@ func (r *repMd) GetMdYyInfo() ([]*object.MdYyInfo, error) {
 		return nil, errors.New(errMsg)
 	}
 	return rList, nil
+}
+
+func (r *repMd) GetZxKcInfo(lst time.Time) ([]*object.ZxKc, time.Time, error) {
+	comm := NewCommon()
+	rows, err := comm.GetRowsBySQL2000(r.dbConfig, sqlGetZxKcInfo, goToolCommon.GetDateTimeStr(lst))
+	if err != nil {
+		errMsg := fmt.Sprintf("get zxkc err: %s", err.Error())
+		log.Error(errMsg)
+		return nil, NewCommon().GetDefaultOprTime(), errors.New(errMsg)
+	}
+	defer func() {
+		_ = rows.Close()
+	}()
+	newLst := lst
+	var fHpId int
+	var fSl float32
+	var fTime time.Time
+	rList := make([]*object.ZxKc, 0)
+	for rows.Next() {
+		err = rows.Scan(&fHpId, &fSl, &fTime)
+		if err != nil {
+			errMsg := fmt.Sprintf("read zxkc err: %s", err.Error())
+			log.Error(errMsg)
+			return nil, NewCommon().GetDefaultOprTime(), errors.New(errMsg)
+		}
+		rList = append(rList, &object.ZxKc{
+			FHpId: fHpId,
+			FSl:   fSl,
+		})
+		if fTime.After(newLst) {
+			newLst = fTime
+		}
+	}
+	if rows.Err() != nil {
+		errMsg := fmt.Sprintf("read zxkc err: %s", rows.Err().Error())
+		log.Error(errMsg)
+		return nil, NewCommon().GetDefaultOprTime(), errors.New(errMsg)
+	}
+	return rList, newLst, nil
 }

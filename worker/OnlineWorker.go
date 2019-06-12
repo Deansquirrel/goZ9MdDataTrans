@@ -4,9 +4,16 @@ import (
 	"errors"
 	"github.com/Deansquirrel/goZ9MdDataTrans/object"
 	"github.com/Deansquirrel/goZ9MdDataTrans/repository"
+	"time"
 )
 
 import log "github.com/Deansquirrel/goToolLog"
+
+var zxkcsj time.Time
+
+func init() {
+	zxkcsj = repository.NewCommon().GetDefaultOprTime()
+}
 
 type onlineWorker struct {
 	comm *common
@@ -79,4 +86,39 @@ func (w *onlineWorker) UpdateMdYyInfo() {
 
 func (w *onlineWorker) updateMdYyInfoHandleErr(err error) {
 	w.comm.HandleErr(object.TaskKeyRefreshMdYyInfo, err)
+}
+
+func (w *onlineWorker) UpdateZxKc() {
+	log.Debug("刷新最新库存变动")
+	repMd := repository.NewRepMd()
+	repOnline, err := repository.NewRepOnline()
+	if err != nil {
+		w.updateZxKcHandleErr(err)
+		return
+	}
+	kcList, lst, err := repMd.GetZxKcInfo(zxkcsj)
+	if err != nil {
+		w.updateZxKcHandleErr(err)
+		return
+	}
+	cInfo, err := repMd.GetZlCompany()
+	if err != nil {
+		w.updateZxKcHandleErr(err)
+		return
+	}
+	err = repOnline.UpdateZxKc(cInfo.FCoId, kcList)
+	if err != nil {
+		w.updateZxKcHandleErr(err)
+		return
+	}
+	err = repOnline.UpdateKcLastUpdate(cInfo.FCoId)
+	if err != nil {
+		w.updateZxKcHandleErr(err)
+		return
+	}
+	zxkcsj = lst
+}
+
+func (w *onlineWorker) updateZxKcHandleErr(err error) {
+	w.comm.HandleErr(object.TaskKeyRefreshZxKc, err)
 }
