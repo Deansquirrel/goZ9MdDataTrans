@@ -1,18 +1,20 @@
 package worker
 
 import (
-	log "github.com/Deansquirrel/goToolLog"
+	"errors"
+	"github.com/Deansquirrel/goZ9MdDataTrans/object"
 	"github.com/Deansquirrel/goZ9MdDataTrans/repository"
-	"github.com/kataras/iris/core/errors"
 )
 
+import log "github.com/Deansquirrel/goToolLog"
+
 type onlineWorker struct {
-	errChan chan<- error //错误通知通道
+	comm *common
 }
 
-func NewOnlineWorker(errChan chan<- error) *onlineWorker {
+func NewOnlineWorker() *onlineWorker {
 	return &onlineWorker{
-		errChan: errChan,
+		comm: NewCommon(),
 	}
 }
 
@@ -22,27 +24,25 @@ func (w *onlineWorker) RefreshHeartBeat() {
 	repMd := repository.NewRepMd()
 	zlCompany, err := repMd.GetZlCompany()
 	if err != nil {
-		w.errChan <- err
+		w.comm.HandleErr(object.TaskKeyRefreshHeartBeat, err)
 		return
 	}
 	if zlCompany == nil {
 		errMsg := "ZlCompany is nil"
-		log.Error(errMsg)
-		w.errChan <- errors.New(errMsg)
+		w.comm.HandleErr(object.TaskKeyRefreshHeartBeat, errors.New(errMsg))
 		return
 	}
 	repOnline, err := repository.NewRepOnline()
 	if err != nil {
-		w.errChan <- err
+		w.comm.HandleErr(object.TaskKeyRefreshHeartBeat, err)
 		return
 	}
 	if repOnline == nil {
 		if zlCompany == nil {
 			errMsg := "repOnline is nil"
-			log.Error(errMsg)
-			w.errChan <- errors.New(errMsg)
+			w.comm.HandleErr(object.TaskKeyRefreshHeartBeat, errors.New(errMsg))
 			return
 		}
 	}
-	w.errChan <- repOnline.UpdateHeartBeat(zlCompany)
+	w.comm.HandleErr(object.TaskKeyRefreshHeartBeat, repOnline.UpdateHeartBeat(zlCompany))
 }

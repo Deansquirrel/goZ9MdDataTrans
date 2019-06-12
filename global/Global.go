@@ -2,7 +2,6 @@ package global
 
 import (
 	"context"
-	"github.com/Deansquirrel/goToolCommon"
 	"github.com/Deansquirrel/goZ9MdDataTrans/object"
 )
 
@@ -23,11 +22,7 @@ var Args *object.ProgramArgs
 //系统参数
 var SysConfig *object.SystemConfig
 
-//TaskList
-var TaskList goToolCommon.IObjectManager
-
 var TaskKeyList []object.TaskKey
-var TaskTicket map[object.TaskKey]chan struct{}
 
 func TaskKeyListInit() {
 	TaskKeyList = make([]object.TaskKey, 0)
@@ -42,14 +37,6 @@ func TaskKeyListInit() {
 		addBbRestoreTask()
 	default:
 		addMdCollectTask()
-	}
-
-	//任务锁（同一任务不可并行）
-	TaskTicket = make(map[object.TaskKey]chan struct{})
-	for _, k := range TaskKeyList {
-		ch := make(chan struct{}, 1)
-		TaskTicket[k] = ch
-		ch <- struct{}{}
 	}
 }
 

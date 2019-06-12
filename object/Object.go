@@ -1,22 +1,8 @@
 package object
 
 import (
-	"context"
-	"github.com/robfig/cron"
 	"time"
 )
-
-type TaskState struct {
-	Key     TaskKey
-	Cron    *cron.Cron
-	CronStr string
-	Running bool
-	Working bool
-	Err     error
-
-	Ctx    context.Context    `json:"-"`
-	Cancel context.CancelFunc `json:"-"`
-}
 
 //任务执行时间配置表
 type TaskCron struct {

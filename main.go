@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"fmt"
-	"github.com/Deansquirrel/goToolCommon"
 	"github.com/Deansquirrel/goZ9MdDataTrans/common"
 	"github.com/Deansquirrel/goZ9MdDataTrans/global"
 	"github.com/Deansquirrel/goZ9MdDataTrans/object"
@@ -20,7 +19,6 @@ import log "github.com/Deansquirrel/goToolLog"
 func init() {
 	global.Args = &object.ProgramArgs{}
 	global.SysConfig = &object.SystemConfig{}
-	global.TaskList = goToolCommon.NewObjectManager()
 
 	global.Ctx, global.Cancel = context.WithCancel(context.Background())
 }

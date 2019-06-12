@@ -1,17 +1,14 @@
 package worker
 
 import (
-	"context"
 	"errors"
 	"fmt"
 	"github.com/Deansquirrel/goToolCommon"
-	"github.com/Deansquirrel/goZ9MdDataTrans/global"
+	"github.com/Deansquirrel/goToolCron"
 	"github.com/Deansquirrel/goZ9MdDataTrans/object"
 	"github.com/Deansquirrel/goZ9MdDataTrans/repository"
-	"github.com/robfig/cron"
 	"runtime/debug"
 	"strings"
-	"sync"
 )
 
 import log "github.com/Deansquirrel/goToolLog"
@@ -20,8 +17,6 @@ const (
 	//TODO 钉钉机器人消息Key待参数化
 	webHook = "7685d3a4b1630c8cb0028ee9cd17beae1578869f8ddf0b7871ecbb8b0743f8ce"
 )
-
-var syncLock sync.Mutex
 
 type common struct {
 }
@@ -32,168 +27,64 @@ func NewCommon() *common {
 
 //启动工作线程
 func (c *common) StartWorker(key object.TaskKey) {
-	s := &object.TaskState{
-		Key:     key,
-		Cron:    nil,
-		CronStr: "",
-		Running: false,
-		Working: false,
-		Err:     nil,
-	}
-
-	syncLock.Lock()
-	defer syncLock.Unlock()
-
-	task := global.TaskList.GetObject(string(s.Key))
-	if task != nil {
-		return
-	}
-	s.Ctx, s.Cancel = context.WithCancel(context.Background())
-	global.TaskList.Register() <- goToolCommon.NewObject(string(s.Key), s)
-
-	errCh := make(chan error)
-
-	go func() {
-		defer func() {
-			err := recover()
-			if err != nil {
-				log.Error(fmt.Sprintf("task %s recover err: %s", key, err))
-				log.Error(string(debug.Stack()))
-			}
-		}()
-		//defer func() {
-		//	close(errCh)
-		//}()
-		for {
-			select {
-			case err := <-errCh:
-				s := global.TaskList.GetObject(string(key))
-				if s == nil {
-					errCh <- errors.New(fmt.Sprintf("task %s err: task state is empty", key))
-					return
-				}
-				cs := s.(*object.TaskState)
-				if err != nil {
-					//c.errHandle(err)
-					c.sendMsg(err.Error())
-				} else {
-					if cs != nil && cs.Err != nil {
-						msg := fmt.Sprintf("Task resume %s", key)
-						log.Warn(msg)
-						c.sendMsg(msg)
-					}
-				}
-				if cs != nil {
-					cs.Err = err
-				}
-			case <-s.Ctx.Done():
-				return
-			case <-global.Ctx.Done():
-				return
-			}
+	var err error
+	var cronStr string
+	defer func() {
+		if err != nil {
+			c.HandleErr(key, err)
+		} else {
+			log.Debug(fmt.Sprintf("start worker %s cron %s", key, cronStr))
 		}
 	}()
-
 	repOnline, err := repository.NewRepOnline()
 	if err != nil {
-		errCh <- err
 		return
 	}
-	cronStr, err := repOnline.GetTaskCron(s.Key)
+	cronStr, err = repOnline.GetTaskCron(key)
 	if err != nil {
-		s.CronStr = ""
-		errCh <- err
 		return
 	}
 	cronStr = strings.Trim(cronStr, " ")
 	if cronStr == "" {
-		errCh <- errors.New(fmt.Sprintf("task %s start err: cron is empty", key))
-		return
-	}
-	s.CronStr = cronStr
-	cr := cron.New()
-	err = cr.AddFunc(s.CronStr, c.getWorkerFuncReal(key, errCh))
-	if err != nil {
-		errCh <- err
+		err = errors.New(fmt.Sprintf("task %s start err: cron is empty", key))
 		return
 	}
 
-	log.Debug(fmt.Sprintf("start worker %s cron %s", key, cronStr))
-
-	cr.Start()
-	s.Running = true
-	s.Cron = cr
+	err = goToolCron.AddFunc(string(key), cronStr, c.getWorkerFuncReal(key), c.GetHandlePanic(key))
 }
 
 //停止工作线程
 func (c *common) StopWorker(key object.TaskKey) {
-	t := global.TaskList.GetObject(string(key))
-	if t == nil {
-		return
-	}
-	global.TaskList.Unregister() <- string(key)
-	log.Debug(fmt.Sprintf("stop worker %s", key))
-	ts := t.(*object.TaskState)
-	if ts.Running {
-		ts.Running = false
-		ts.Cron.Stop()
-		ts.Cancel()
-	}
+	defer log.Debug(fmt.Sprintf("stop worker %s", key))
+	goToolCron.Stop(string(key))
 }
 
-func (c *common) getWorkerFuncReal(key object.TaskKey, errCh chan<- error) func() {
+func (c *common) getWorkerFuncReal(key object.TaskKey) func() {
 	return func() {
 		guid := goToolCommon.Guid()
-		ticketCh := global.TaskTicket[key]
-		if ticketCh == nil {
-			log.Warn(fmt.Sprintf("ticket chan is nil, task key: %s", key))
-			return
-		}
 
-		defer func() {
-			//错误处理（panic）
-			err := recover()
-			if err != nil {
-				errMsg := fmt.Sprintf("task recover get err: %s", err)
-				log.Error(errMsg)
-				log.Error(string(debug.Stack()))
-				//errCh <- errors.New(errMsg)
-				c.sendMsg(errMsg)
-			}
-			log.Debug(fmt.Sprintf("task %s[%s] complete", key, guid))
-		}()
+		log.Debug(fmt.Sprintf("task %s[%s] start", key, guid))
+		defer log.Debug(fmt.Sprintf("task %s[%s] complete", key, guid))
 
-		select {
-		case <-ticketCh:
-			log.Debug(fmt.Sprintf("task %s[%s] start", key, guid))
-			defer func() {
-				ticketCh <- struct{}{}
-			}()
-		default:
-			log.Warn(fmt.Sprintf("task %s[%s] chan is empty, ignor", key, guid))
-			return
-		}
-
-		f := c.getWorkerFunc(key, errCh)
+		f := c.getWorkerFunc(key)
 		if f != nil {
 			f()
 		} else {
 			errMsg := fmt.Sprintf("task %s[%s] start err: func is nil", key, guid)
-			log.Error(errMsg)
-			errCh <- errors.New(errMsg)
+			c.HandleErr(key, errors.New(errMsg))
 			return
 		}
 	}
 }
 
 //获取任务执行函数
-func (c *common) getWorkerFunc(key object.TaskKey, errCh chan<- error) func() {
+func (c *common) getWorkerFunc(key object.TaskKey) func() {
 	//TODO 获取任务执行函数
 	switch key {
 	case object.TaskKeyRefreshConfig:
-		return NewCommonWorker(errCh).RefreshConfig
+		return NewCommonWorker().RefreshConfig
 	case object.TaskKeyRefreshHeartBeat:
-		return NewOnlineWorker(errCh).RefreshHeartBeat
+		return NewOnlineWorker().RefreshHeartBeat
 	default:
 		return nil
 	}
@@ -227,8 +118,9 @@ func (c *common) getWorkerFunc(key object.TaskKey, errCh chan<- error) func() {
 //	}
 
 //task错误处理
-func (c *common) errHandle(err error) {
+func (c *common) HandleErr(key object.TaskKey, err error) {
 	if err != nil {
+		log.Error(err.Error())
 		c.sendMsg(err.Error())
 	}
 }
@@ -246,10 +138,14 @@ func (c *common) sendMsg(msg string) {
 	}
 }
 
-func (c *common) HandlePanic() {
-	err := recover()
-	if err != nil {
-		log.Error(fmt.Sprintf("recover get err: %s", err))
-		log.Error(string(debug.Stack()))
+func (c *common) GetHandlePanic(key object.TaskKey) func(interface{}) {
+	return func(err interface{}) {
+		c.handlePanic(key, err)
 	}
+}
+
+func (c *common) handlePanic(key object.TaskKey, err interface{}) {
+	errMsg := fmt.Sprintf("task [%s] recover get err: %s", key, err)
+	c.HandleErr(key, errors.New(errMsg))
+	log.Error(string(debug.Stack()))
 }
