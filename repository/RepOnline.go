@@ -6,6 +6,7 @@ import (
 	"github.com/Deansquirrel/goToolCommon"
 	"github.com/Deansquirrel/goToolMSSql"
 	"github.com/Deansquirrel/goZ9MdDataTrans/object"
+	"time"
 )
 
 import log "github.com/Deansquirrel/goToolLog"
@@ -48,6 +49,11 @@ const (
 		"		INSERT INTO [kclastupdate]([mdid],[lastupdate]) " +
 		"		VALUES (?,getDate()) " +
 		"	END"
+
+	sqlGetLstMdYyInfoOpr = "" +
+		"SELECT top 1 [oprsn],[mdid],[yyr],[tc],[sr],[oprtime] " +
+		"FROM [mdyyinfo] " +
+		"ORDER BY [oprsn] ASC"
 )
 
 type repOnline struct {
@@ -159,4 +165,45 @@ func (r *repOnline) UpdateKcLastUpdate(mdId int) error {
 	comm := NewCommon()
 	return comm.SetRowsBySQL(r.dbConfig, sqlUpdateKcLastUpdate,
 		mdId, mdId, mdId)
+}
+
+func (r *repOnline) GetLstMdYyInfoOpr() (*object.MdYyInfoOpr, error) {
+	//TODO
+	comm := NewCommon()
+	rows, err := comm.GetRowsBySQL(r.dbConfig, sqlGetLstMdYyInfoOpr)
+	if err != nil {
+		return nil, err
+	}
+	defer func() {
+		_ = rows.Close()
+	}()
+	var oprSn, mdId int
+	var yyr, oprTime time.Time
+	var tc, sr float32
+
+	for rows.Next() {
+		err = rows.Scan(&oprSn, &mdId, &yyr, &tc, &sr, &oprTime)
+		if err != nil {
+			errMsg := fmt.Sprintf("Get Lst MdYyInfoOpr, read data err: %s", err.Error())
+			log.Error(errMsg)
+			return nil, errors.New(errMsg)
+		}
+	}
+
+	return nil, nil
+}
+
+func (r *repOnline) DelLstMdYyInfoOpr(sn int) error {
+	//TODO
+	return nil
+}
+
+func (r *repOnline) GetLstZxKcOpr() (*object.ZxKcOpr, error) {
+	//TODO
+	return nil, nil
+}
+
+func (r *repOnline) DelLstZxKcOpr(sn int) error {
+	//TODO
+	return nil
 }

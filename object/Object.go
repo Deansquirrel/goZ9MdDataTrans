@@ -42,3 +42,20 @@ type ZxKc struct {
 	FSl      float32
 	FOprTime time.Time
 }
+
+type MdYyInfoOpr struct {
+	FOprSn   int
+	FMdId    int
+	FYyr     time.Time
+	FTc      int
+	FSr      float32
+	FOprTime time.Time
+}
+
+type ZxKcOpr struct {
+	FOprSn   int
+	FMdId    int
+	FHpId    int
+	FSl      float32
+	FOprTime time.Time
+}

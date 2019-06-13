@@ -9,6 +9,9 @@ const (
 
 	TaskKeyRefreshZxKc     TaskKey = "RefreshZxKc"     //刷新最新库存变动
 	TaskKeyRefreshMdYyInfo TaskKey = "RefreshMdYyInfo" //刷新门店营业信息
+
+	TaskKeyRestoreZxKc     TaskKey = "RestoreZxKc"
+	TaskKeyRestoreMdYyInfo TaskKey = "RestoreMdYyInfo"
 )
 
 //运行模式

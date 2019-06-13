@@ -46,5 +46,6 @@ func addMdCollectTask() {
 }
 
 func addBbRestoreTask() {
-
+	TaskKeyList = append(TaskKeyList, object.TaskKeyRestoreZxKc)
+	TaskKeyList = append(TaskKeyList, object.TaskKeyRestoreMdYyInfo)
 }

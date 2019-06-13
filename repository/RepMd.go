@@ -12,7 +12,7 @@ import (
 import log "github.com/Deansquirrel/goToolLog"
 
 const (
-	sqlGetZlCompany = "" +
+	sqlGetMdZlCompany = "" +
 		"SELECT [coid],[coab],[cocode],[couserab],[cousercode]" +
 		",[cofunc],[coaccstartday] " +
 		"FROM [zlcompany]"
@@ -42,7 +42,7 @@ func NewRepMd() *repMd {
 //获取zlCompany信息
 func (r *repMd) GetZlCompany() (*object.ZlCompany, error) {
 	comm := NewCommon()
-	rows, err := comm.GetRowsBySQL2000(r.dbConfig, sqlGetZlCompany)
+	rows, err := comm.GetRowsBySQL2000(r.dbConfig, sqlGetMdZlCompany)
 	if err != nil {
 		errMsg := fmt.Sprintf("get zlcompany err: %s", err.Error())
 		log.Error(errMsg)
