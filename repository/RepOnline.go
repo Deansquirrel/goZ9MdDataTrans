@@ -34,7 +34,7 @@ const (
 
 	sqlUpdateZxKc = "" +
 		"INSERT INTO [zxkc]([mdid],[hpid],[sl],[oprtime]) " +
-		"VALUES (?,?,?,getDate())"
+		"VALUES (?,?,?,?)"
 
 	sqlUpdateKcLastUpdate = "" +
 		"IF EXISTS (SELECT * FROM [kclastupdate] WHERE [mdid]=?)  " +
@@ -146,7 +146,8 @@ func (r *repOnline) UpdateZxKc(fMdId int, kcList []*object.ZxKc) error {
 		err = comm.SetRowsBySQL(r.dbConfig, sqlUpdateZxKc,
 			fMdId,
 			kc.FHpId,
-			fmt.Sprintf("%v", kc.FSl))
+			fmt.Sprintf("%v", kc.FSl),
+			goToolCommon.GetDateTimeStrWithMillisecond(kc.FOprTime))
 		if err != nil {
 			return err
 		}

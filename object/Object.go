@@ -38,6 +38,7 @@ type MdYyInfo struct {
 }
 
 type ZxKc struct {
-	FHpId int
-	FSl   float32
+	FHpId    int
+	FSl      float32
+	FOprTime time.Time
 }

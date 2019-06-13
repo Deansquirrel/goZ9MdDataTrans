@@ -128,7 +128,9 @@ func (r *repMd) GetMdYyInfo() ([]*object.MdYyInfo, error) {
 
 func (r *repMd) GetZxKcInfo(lst time.Time) ([]*object.ZxKc, time.Time, error) {
 	comm := NewCommon()
-	rows, err := comm.GetRowsBySQL2000(r.dbConfig, sqlGetZxKcInfo, goToolCommon.GetDateTimeStr(lst))
+	log.Debug(goToolCommon.GetDateTimeStrWithMillisecond(lst))
+	rows, err := comm.GetRowsBySQL2000(r.dbConfig, sqlGetZxKcInfo,
+		goToolCommon.GetDateTimeStrWithMillisecond(lst))
 	if err != nil {
 		errMsg := fmt.Sprintf("get zxkc err: %s", err.Error())
 		log.Error(errMsg)
@@ -150,8 +152,9 @@ func (r *repMd) GetZxKcInfo(lst time.Time) ([]*object.ZxKc, time.Time, error) {
 			return nil, NewCommon().GetDefaultOprTime(), errors.New(errMsg)
 		}
 		rList = append(rList, &object.ZxKc{
-			FHpId: fHpId,
-			FSl:   fSl,
+			FHpId:    fHpId,
+			FSl:      fSl,
+			FOprTime: fTime,
 		})
 		if fTime.After(newLst) {
 			newLst = fTime
