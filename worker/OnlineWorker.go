@@ -45,11 +45,9 @@ func (w *onlineWorker) RefreshHeartBeat() {
 		return
 	}
 	if repOnline == nil {
-		if zlCompany == nil {
-			errMsg := "repOnline is nil"
-			w.refreshHeartBeatHandleErr(errors.New(errMsg))
-			return
-		}
+		errMsg := "repOnline is nil"
+		w.refreshHeartBeatHandleErr(errors.New(errMsg))
+		return
 	}
 	err = repOnline.UpdateHeartBeat(zlCompany)
 	if err != nil {

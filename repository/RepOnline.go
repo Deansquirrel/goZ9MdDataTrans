@@ -54,6 +54,10 @@ const (
 		"SELECT top 1 [oprsn],[mdid],[yyr],[tc],[sr],[oprtime] " +
 		"FROM [mdyyinfo] " +
 		"ORDER BY [oprsn] ASC"
+
+	sqlDelLstMdYyInfoOpr = "" +
+		"DELETE FROM [mdyyinfo] " +
+		"WHERE [oprsn]=?"
 )
 
 type repOnline struct {
@@ -168,7 +172,6 @@ func (r *repOnline) UpdateKcLastUpdate(mdId int) error {
 }
 
 func (r *repOnline) GetLstMdYyInfoOpr() (*object.MdYyInfoOpr, error) {
-	//TODO
 	comm := NewCommon()
 	rows, err := comm.GetRowsBySQL(r.dbConfig, sqlGetLstMdYyInfoOpr)
 	if err != nil {
@@ -181,6 +184,7 @@ func (r *repOnline) GetLstMdYyInfoOpr() (*object.MdYyInfoOpr, error) {
 	var yyr, oprTime time.Time
 	var tc, sr float32
 
+	rList := make([]*object.MdYyInfoOpr, 0)
 	for rows.Next() {
 		err = rows.Scan(&oprSn, &mdId, &yyr, &tc, &sr, &oprTime)
 		if err != nil {
@@ -188,14 +192,30 @@ func (r *repOnline) GetLstMdYyInfoOpr() (*object.MdYyInfoOpr, error) {
 			log.Error(errMsg)
 			return nil, errors.New(errMsg)
 		}
+		rList = append(rList, &object.MdYyInfoOpr{
+			FOprSn:   oprSn,
+			FMdId:    mdId,
+			FYyr:     yyr,
+			FTc:      tc,
+			FSr:      sr,
+			FOprTime: oprTime,
+		})
 	}
-
-	return nil, nil
+	if rows.Err() != nil {
+		errMsg := fmt.Sprintf("Get Lst MdYyInfoOpr, read data err: %s", rows.Err().Error())
+		log.Error(errMsg)
+		return nil, errors.New(errMsg)
+	}
+	if len(rList) > 0 {
+		return rList[0], nil
+	} else {
+		return nil, nil
+	}
 }
 
 func (r *repOnline) DelLstMdYyInfoOpr(sn int) error {
-	//TODO
-	return nil
+	comm := NewCommon()
+	return comm.SetRowsBySQL(r.dbConfig, sqlDelLstMdYyInfoOpr, sn)
 }
 
 func (r *repOnline) GetLstZxKcOpr() (*object.ZxKcOpr, error) {

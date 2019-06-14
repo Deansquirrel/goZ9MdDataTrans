@@ -47,7 +47,7 @@ type MdYyInfoOpr struct {
 	FOprSn   int
 	FMdId    int
 	FYyr     time.Time
-	FTc      int
+	FTc      float32
 	FSr      float32
 	FOprTime time.Time
 }

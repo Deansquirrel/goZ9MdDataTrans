@@ -3,6 +3,7 @@ package repository
 import (
 	"errors"
 	"fmt"
+	"github.com/Deansquirrel/goToolCommon"
 	"github.com/Deansquirrel/goToolMSSql2000"
 	"github.com/Deansquirrel/goZ9MdDataTrans/object"
 	"time"
@@ -15,15 +16,27 @@ const (
 		"SELECT [coid],[coab],[cocode],[couserab],[cousercode]" +
 		",[cofunc],[coaccstartday] " +
 		"FROM [zlcompany]"
+	sqlRestoreMdYyInfo = "" +
+		"IF EXISTS (SELECT * FROM [mdyyinfo] WHERE [mdid] = ? AND [yyr] = ?) " +
+		"	BEGIN " +
+		"		UPDATE [mdyyinfo] " +
+		"		SET [tc]=?,[sr]=?,[recorddate]=? " +
+		"		WHERE [mdid] = ? AND [yyr] = ? " +
+		"	END " +
+		"ELSE " +
+		"	BEGIN " +
+		"		INSERT INTO [mdyyinfo]([mdid],[yyr],[tc],[sr],[recorddate]) " +
+		"		VALUES(?,?,?,?,?) " +
+		"	END"
 )
 
 type repBb struct {
 	dbConfig *goToolMSSql2000.MSSqlConfig
 }
 
-func NewRepBb() *repMd {
+func NewRepBb() *repBb {
 	c := common{}
-	return &repMd{
+	return &repBb{
 		dbConfig: c.ConvertDbConfigTo2000(c.GetMdDbConfig()),
 	}
 }
@@ -78,8 +91,21 @@ func (r *repBb) GetZlCompany() (*object.ZlCompany, error) {
 }
 
 func (r *repBb) RestoreMdYyInfo(opr *object.MdYyInfoOpr) error {
-	//TODO
-	return nil
+	comm := NewCommon()
+	return comm.SetRowsBySQL2000(r.dbConfig, sqlRestoreMdYyInfo,
+		opr.FMdId,
+		goToolCommon.GetDateStr(opr.FYyr),
+		fmt.Sprintf("%v", opr.FTc),
+		fmt.Sprintf("%v", opr.FSr),
+		goToolCommon.GetDateTimeStrWithMillisecond(opr.FOprTime),
+		opr.FMdId,
+		goToolCommon.GetDateStr(opr.FYyr),
+		opr.FMdId,
+		goToolCommon.GetDateStr(opr.FYyr),
+		fmt.Sprintf("%v", opr.FTc),
+		fmt.Sprintf("%v", opr.FSr),
+		goToolCommon.GetDateTimeStrWithMillisecond(opr.FOprTime),
+	)
 }
 
 func (r *repBb) RestoreZxKc(opr *object.ZxKcOpr) error {
