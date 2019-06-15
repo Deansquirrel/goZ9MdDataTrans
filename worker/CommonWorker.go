@@ -19,6 +19,9 @@ func NewCommonWorker() *commonWorker {
 
 //刷新并检查任务配置
 func (w *commonWorker) RefreshConfig() {
+
+	w.comm.StartDelay()
+
 	repOnline, err := repository.NewRepOnline()
 	if err != nil {
 		w.refreshConfigHandleErr(err)

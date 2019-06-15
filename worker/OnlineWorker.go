@@ -62,6 +62,7 @@ func (w *onlineWorker) refreshHeartBeatHandleErr(err error) {
 
 func (w *onlineWorker) UpdateMdYyInfo() {
 	log.Debug("刷新门店营业信息")
+	w.comm.StartDelay()
 	repMd := repository.NewRepMd()
 	repOnline, err := repository.NewRepOnline()
 	if err != nil {
@@ -88,6 +89,7 @@ func (w *onlineWorker) updateMdYyInfoHandleErr(err error) {
 
 func (w *onlineWorker) UpdateZxKc() {
 	log.Debug("刷新最新库存变动")
+	w.comm.StartDelay()
 	repMd := repository.NewRepMd()
 	repOnline, err := repository.NewRepOnline()
 	if err != nil {

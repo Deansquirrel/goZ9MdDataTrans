@@ -100,8 +100,8 @@ func (r *repMd) GetMdYyInfo() ([]*object.MdYyInfo, error) {
 		_ = rows.Close()
 	}()
 	var fYyr time.Time
-	var fMdId, fTc int
-	var fSr float32
+	var fMdId int
+	var fTc, fSr float32
 	rList := make([]*object.MdYyInfo, 0)
 	for rows.Next() {
 		err = rows.Scan(&fMdId, &fYyr, &fTc, &fSr)
