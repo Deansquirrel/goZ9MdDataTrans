@@ -28,6 +28,18 @@ const (
 		"		INSERT INTO [mdyyinfo]([mdid],[yyr],[tc],[sr],[recorddate]) " +
 		"		VALUES(?,?,?,?,?) " +
 		"	END"
+	sqlRestoreZxKc = "" +
+		"IF EXISTS(SELECT * FROM [zxkc] WHERE [mdid]=? AND [hpid]=?) " +
+		"	BEGIN " +
+		"		UPDATE [zxkc] " +
+		"		SET [sl]=?,[lastupdate]=? " +
+		"		WHERE [mdid]=? AND [hpid]=? " +
+		"	END " +
+		"ELSE " +
+		"	BEGIN " +
+		"		INSERT INTO [zxkc]([mdid],[hpid],[sl],[lastupdate]) " +
+		"		VALUES (?,?,?,?) " +
+		"	END"
 )
 
 type repBb struct {
@@ -109,6 +121,16 @@ func (r *repBb) RestoreMdYyInfo(opr *object.MdYyInfoOpr) error {
 }
 
 func (r *repBb) RestoreZxKc(opr *object.ZxKcOpr) error {
-	//TODO
-	return nil
+	comm := NewCommon()
+	return comm.SetRowsBySQL2000(r.dbConfig, sqlRestoreZxKc,
+		opr.FMdId,
+		opr.FHpId,
+		fmt.Sprintf("%v", opr.FSl),
+		goToolCommon.GetDateTimeStrWithMillisecond(opr.FOprTime),
+		opr.FMdId,
+		opr.FHpId,
+		opr.FMdId,
+		opr.FHpId,
+		fmt.Sprintf("%v", opr.FSl),
+		goToolCommon.GetDateTimeStrWithMillisecond(opr.FOprTime))
 }

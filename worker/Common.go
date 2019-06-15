@@ -79,7 +79,6 @@ func (c *common) getWorkerFuncReal(key object.TaskKey) func() {
 
 //获取任务执行函数
 func (c *common) getWorkerFunc(key object.TaskKey) func() {
-	//TODO 获取任务执行函数
 	switch key {
 	case object.TaskKeyRefreshConfig:
 		return NewCommonWorker().RefreshConfig
@@ -90,7 +89,9 @@ func (c *common) getWorkerFunc(key object.TaskKey) func() {
 	case object.TaskKeyRefreshZxKc:
 		return NewOnlineWorker().UpdateZxKc
 	case object.TaskKeyRestoreMdYyInfo:
-		return NewBbWorker().RestoreRestoreMdYyInfo
+		return NewBbWorker().RestoreMdYyInfo
+	case object.TaskKeyRestoreZxKc:
+		return NewBbWorker().RestoreZxKc
 	default:
 		return nil
 	}

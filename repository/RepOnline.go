@@ -59,6 +59,15 @@ const (
 	sqlDelLstMdYyInfoOpr = "" +
 		"DELETE FROM [mdyyinfo] " +
 		"WHERE [oprsn]=?"
+
+	sqlGetLstZxKcOpr = "" +
+		"SELECT TOP 1 [oprsn],[mdid],[hpid],[sl],[oprtime] " +
+		"FROM [zxkc] " +
+		"ORDER BY [oprsn] ASC"
+
+	sqlDelLstZxKcOpr = "" +
+		"DELETE FROM [zxkc] " +
+		"WHERE [oprsn]=?"
 )
 
 type repOnline struct {
@@ -221,11 +230,46 @@ func (r *repOnline) DelLstMdYyInfoOpr(sn int) error {
 }
 
 func (r *repOnline) GetLstZxKcOpr() (*object.ZxKcOpr, error) {
-	//TODO
-	return nil, nil
+	comm := NewCommon()
+	rows, err := comm.GetRowsBySQL(r.dbConfig, sqlGetLstZxKcOpr)
+	if err != nil {
+		return nil, err
+	}
+	defer func() {
+		_ = rows.Close()
+	}()
+	var oprSn, mdId, hpId int
+	var sl float32
+	var oprTime time.Time
+	rList := make([]*object.ZxKcOpr, 0)
+	for rows.Next() {
+		err = rows.Scan(&oprSn, &mdId, &hpId, &sl, &oprTime)
+		if err != nil {
+			errMsg := fmt.Sprintf("get lst zxkc opr,read data err: %s", err.Error())
+			log.Error(errMsg)
+			return nil, errors.New(errMsg)
+		}
+		rList = append(rList, &object.ZxKcOpr{
+			FOprSn:   oprSn,
+			FMdId:    mdId,
+			FHpId:    hpId,
+			FSl:      sl,
+			FOprTime: oprTime,
+		})
+	}
+	if rows.Err() != nil {
+		errMsg := fmt.Sprintf("get lst zxkc opr,read data err: %s", rows.Err().Error())
+		log.Error(errMsg)
+		return nil, errors.New(errMsg)
+	}
+	if len(rList) > 0 {
+		return rList[0], nil
+	} else {
+		return nil, nil
+	}
 }
 
 func (r *repOnline) DelLstZxKcOpr(sn int) error {
-	//TODO
-	return nil
+	comm := NewCommon()
+	return comm.SetRowsBySQL(r.dbConfig, sqlDelLstZxKcOpr, sn)
 }
