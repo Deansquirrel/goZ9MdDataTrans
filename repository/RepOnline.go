@@ -155,8 +155,8 @@ func (r *repOnline) UpdateMdYyInfo(info *object.MdYyInfo) error {
 	return comm.SetRowsBySQL(r.dbConfig, sqlUpdateMdYyInfo,
 		info.FMdId,
 		goToolCommon.GetDateStr(info.FYyr),
-		fmt.Sprintf("%v", info.FTc),
-		fmt.Sprintf("%v", info.FSr),
+		info.FTc,
+		info.FSr,
 		goToolCommon.GetDateTimeStr(info.FOprTime))
 }
 
@@ -167,7 +167,7 @@ func (r *repOnline) UpdateZxKc(fMdId int, kcList []*object.ZxKc) error {
 		err = comm.SetRowsBySQL(r.dbConfig, sqlUpdateZxKc,
 			fMdId,
 			kc.FHpId,
-			fmt.Sprintf("%v", kc.FSl),
+			kc.FSl,
 			goToolCommon.GetDateTimeStrWithMillisecond(kc.FOprTime))
 		if err != nil {
 			return err

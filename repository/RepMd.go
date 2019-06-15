@@ -128,7 +128,7 @@ func (r *repMd) GetMdYyInfo() ([]*object.MdYyInfo, error) {
 
 func (r *repMd) GetZxKcInfo(lst time.Time) ([]*object.ZxKc, time.Time, error) {
 	comm := NewCommon()
-	log.Debug(goToolCommon.GetDateTimeStrWithMillisecond(lst))
+	//log.Debug(goToolCommon.GetDateTimeStrWithMillisecond(lst))
 	rows, err := comm.GetRowsBySQL2000(r.dbConfig, sqlGetZxKcInfo,
 		goToolCommon.GetDateTimeStrWithMillisecond(lst))
 	if err != nil {
