@@ -6,14 +6,12 @@ import (
 )
 
 const (
-	//PreVersion = "0.0.0 Build20190101"
+	//PreVersion = "0.0.1 Build20190615"
 	//TestVersion = "0.0.0 Build20190101"
-	Version = "0.0.1 Build20190615"
+	Version = "0.0.0 Build20190101"
 )
 
 const SecretKey = "Z9MdDataTrans"
-
-const DefaultRunMode = object.RunModeMdCollect
 
 var Ctx context.Context
 var Cancel func()
