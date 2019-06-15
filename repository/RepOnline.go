@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/Deansquirrel/goToolCommon"
 	"github.com/Deansquirrel/goToolMSSql"
+	"github.com/Deansquirrel/goZ9MdDataTrans/global"
 	"github.com/Deansquirrel/goZ9MdDataTrans/object"
 	"time"
 )
@@ -20,13 +21,13 @@ const (
 		"IF EXISTS (SELECT * FROM [heartbeat] WHERE [mdid] = ?) " +
 		"	BEGIN " +
 		"		UPDATE [heartbeat] " +
-		"		SET [heartbeat] = getDate() " +
+		"		SET [heartbeat] = getDate(),clientVersion = ? " +
 		"		WHERE [mdid] = ? " +
 		"	END " +
 		"ELSE " +
 		"	BEGIN " +
-		"		INSERT INTO [heartbeat]([mdid],[mdname],[heartbeat]) " +
-		"		SELECT ?,?,getDate() " +
+		"		INSERT INTO [heartbeat]([mdid],[mdname],[clientVersion],[heartbeat]) " +
+		"		SELECT ?,?,?,getDate() " +
 		"	END"
 
 	sqlUpdateMdYyInfo = "" +
@@ -136,7 +137,8 @@ func (r *repOnline) UpdateHeartBeat(company *object.ZlCompany) error {
 		return errors.New(errMsg)
 	}
 	comm := NewCommon()
-	return comm.SetRowsBySQL(r.dbConfig, sqlRefreshHeartBeat, company.FCoId, company.FCoId, company.FCoId, company.FCoAb)
+	return comm.SetRowsBySQL(r.dbConfig, sqlRefreshHeartBeat,
+		company.FCoId, global.Version, company.FCoId, company.FCoId, company.FCoAb, global.Version)
 }
 
 func (r *repOnline) UpdateMdYyInfo(info *object.MdYyInfo) error {
