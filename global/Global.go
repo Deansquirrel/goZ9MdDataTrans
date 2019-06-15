@@ -13,6 +13,8 @@ const (
 
 const SecretKey = "Z9MdDataTrans"
 
+const DefaultRunMode = object.RunModeMdCollect
+
 var Ctx context.Context
 var Cancel func()
 

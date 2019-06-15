@@ -3,6 +3,7 @@ package object
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/Deansquirrel/goZ9MdDataTrans/global"
 	"strings"
 )
 
@@ -77,7 +78,7 @@ type systemConfigRunMode struct {
 
 func (c *systemConfigRunMode) FormatConfig() {
 	if string(c.Mode) == "" {
-		c.Mode = RunModeMdCollect
+		c.Mode = global.DefaultRunMode
 	}
 }
 
