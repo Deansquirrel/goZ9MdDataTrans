@@ -100,8 +100,8 @@ func (r *repMd) GetMdYyInfo() ([]*object.MdYyInfo, error) {
 		_ = rows.Close()
 	}()
 	var fYyr time.Time
-	var fMdId int
-	var fTc, fSr float32
+	var fTc, fMdId int
+	var fSr float64
 	rList := make([]*object.MdYyInfo, 0)
 	for rows.Next() {
 		err = rows.Scan(&fMdId, &fYyr, &fTc, &fSr)
@@ -141,7 +141,7 @@ func (r *repMd) GetZxKcInfo(lst time.Time) ([]*object.ZxKc, time.Time, error) {
 	}()
 	newLst := lst
 	var fHpId int
-	var fSl float32
+	var fSl float64
 	var fTime time.Time
 	rList := make([]*object.ZxKc, 0)
 	for rows.Next() {

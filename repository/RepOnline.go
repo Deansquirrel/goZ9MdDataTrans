@@ -191,9 +191,9 @@ func (r *repOnline) GetLstMdYyInfoOpr() (*object.MdYyInfoOpr, error) {
 	defer func() {
 		_ = rows.Close()
 	}()
-	var oprSn, mdId int
+	var oprSn, mdId, tc int
 	var yyr, oprTime time.Time
-	var tc, sr float32
+	var sr float64
 
 	rList := make([]*object.MdYyInfoOpr, 0)
 	for rows.Next() {

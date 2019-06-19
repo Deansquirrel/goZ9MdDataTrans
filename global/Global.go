@@ -8,7 +8,7 @@ import (
 const (
 	//PreVersion = "0.0.3 Build20190615"
 	//TestVersion = "0.0.0 Build20190101"
-	Version = "0.0.0 Build20190101"
+	Version = "0.0.4 Build20190619"
 )
 
 const SecretKey = "Z9MdDataTrans"

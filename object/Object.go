@@ -32,14 +32,14 @@ type ZlCompany struct {
 type MdYyInfo struct {
 	FMdId    int
 	FYyr     time.Time
-	FTc      float32
-	FSr      float32
+	FTc      int
+	FSr      float64
 	FOprTime time.Time
 }
 
 type ZxKc struct {
 	FHpId    int
-	FSl      float32
+	FSl      float64
 	FOprTime time.Time
 }
 
@@ -47,8 +47,8 @@ type MdYyInfoOpr struct {
 	FOprSn   int
 	FMdId    int
 	FYyr     time.Time
-	FTc      float32
-	FSr      float32
+	FTc      int
+	FSr      float64
 	FOprTime time.Time
 }
 

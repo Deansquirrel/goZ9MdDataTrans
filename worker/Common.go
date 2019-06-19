@@ -9,7 +9,6 @@ import (
 	"github.com/Deansquirrel/goZ9MdDataTrans/repository"
 	"runtime/debug"
 	"strings"
-	"time"
 )
 
 import log "github.com/Deansquirrel/goToolLog"
@@ -160,7 +159,7 @@ func (c *common) handlePanic(key object.TaskKey, err interface{}) {
 
 func (c *common) StartDelay() {
 	//启动延迟，错峰运行
-	delaySecond := goToolCommon.RandInt(1, 60)
-	log.Debug(fmt.Sprintf("启动延迟[%d]秒", delaySecond))
-	time.Sleep(time.Duration(1000 * 1000 * 1000 * delaySecond))
+	//delaySecond := goToolCommon.RandInt(1, 60)
+	//log.Debug(fmt.Sprintf("启动延迟[%d]秒", delaySecond))
+	//time.Sleep(time.Duration(1000 * 1000 * 1000 * delaySecond))
 }
