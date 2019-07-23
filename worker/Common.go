@@ -134,15 +134,16 @@ func (c *common) HandleErr(key object.TaskKey, err error) {
 
 //发送钉钉消息
 func (c *common) sendMsg(msg string) {
-	dt := object.NewDingTalkRobot(&object.DingTalkRobotConfigData{
-		FWebHookKey: webHook,
-		FAtMobiles:  "",
-		FIsAtAll:    0,
-	})
-	sendErr := dt.SendMsg(msg)
-	if sendErr != nil {
-		log.Error(fmt.Sprintf("send msg error,msg: %s, error: %s", msg, sendErr.Error()))
-	}
+	log.Warn(msg)
+	//dt := object.NewDingTalkRobot(&object.DingTalkRobotConfigData{
+	//	FWebHookKey: webHook,
+	//	FAtMobiles:  "",
+	//	FIsAtAll:    0,
+	//})
+	//sendErr := dt.SendMsg(msg)
+	//if sendErr != nil {
+	//	log.Error(fmt.Sprintf("send msg error,msg: %s, error: %s", msg, sendErr.Error()))
+	//}
 }
 
 func (c *common) GetHandlePanic(key object.TaskKey) func(interface{}) {
