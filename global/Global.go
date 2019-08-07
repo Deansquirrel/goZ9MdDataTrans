@@ -6,9 +6,9 @@ import (
 )
 
 const (
-	//PreVersion = "0.0.5 Build20190723"
+	//PreVersion = "1.0.0 Build20190807"
 	//TestVersion = "0.0.0 Build20190101"
-	Version = "1.0.0 Build20190807"
+	Version = "0.0.0 Build20190101"
 	Type    = "Z9MdDataTrans"
 )
 
