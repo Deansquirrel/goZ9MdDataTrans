@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/Deansquirrel/goToolCommon"
 	"github.com/Deansquirrel/goToolMSSql"
+	"github.com/Deansquirrel/goToolMSSqlHelper"
 	"github.com/Deansquirrel/goZ9MdDataTrans/global"
 	"github.com/Deansquirrel/goZ9MdDataTrans/object"
 	"time"
@@ -106,8 +107,7 @@ func (r *repOnline) GetTaskCron(key object.TaskKey) (string, error) {
 
 //获取TaskCron配置列表
 func (r *repOnline) GetTaskCronList() ([]*object.TaskCron, error) {
-	comm := NewCommon()
-	rows, err := comm.GetRowsBySQL(r.dbConfig, sqlGetTaskCronList)
+	rows, err := goToolMSSqlHelper.GetRowsBySQL(r.dbConfig, sqlGetTaskCronList)
 	if err != nil {
 		return nil, err
 	}
@@ -145,14 +145,12 @@ func (r *repOnline) UpdateHeartBeat(company *object.ZlCompany) error {
 		log.Error(errMsg)
 		return errors.New(errMsg)
 	}
-	comm := NewCommon()
-	return comm.SetRowsBySQL(r.dbConfig, sqlRefreshHeartBeat,
+	return goToolMSSqlHelper.SetRowsBySQL(r.dbConfig, sqlRefreshHeartBeat,
 		company.FCoId, global.Version, company.FCoId, company.FCoId, company.FCoAb, global.Version)
 }
 
 func (r *repOnline) UpdateMdYyInfo(info *object.MdYyInfo) error {
-	comm := NewCommon()
-	return comm.SetRowsBySQL(r.dbConfig, sqlUpdateMdYyInfo,
+	return goToolMSSqlHelper.SetRowsBySQL(r.dbConfig, sqlUpdateMdYyInfo,
 		info.FMdId,
 		goToolCommon.GetDateStr(info.FYyr),
 		info.FTc,
@@ -161,10 +159,9 @@ func (r *repOnline) UpdateMdYyInfo(info *object.MdYyInfo) error {
 }
 
 func (r *repOnline) UpdateZxKc(fMdId int, kcList []*object.ZxKc) error {
-	comm := NewCommon()
 	var err error
 	for _, kc := range kcList {
-		err = comm.SetRowsBySQL(r.dbConfig, sqlUpdateZxKc,
+		err = goToolMSSqlHelper.SetRowsBySQL(r.dbConfig, sqlUpdateZxKc,
 			fMdId,
 			kc.FHpId,
 			kc.FSl,
@@ -177,14 +174,12 @@ func (r *repOnline) UpdateZxKc(fMdId int, kcList []*object.ZxKc) error {
 }
 
 func (r *repOnline) UpdateKcLastUpdate(mdId int) error {
-	comm := NewCommon()
-	return comm.SetRowsBySQL(r.dbConfig, sqlUpdateKcLastUpdate,
+	return goToolMSSqlHelper.SetRowsBySQL(r.dbConfig, sqlUpdateKcLastUpdate,
 		mdId, mdId, mdId)
 }
 
 func (r *repOnline) GetLstMdYyInfoOpr() (*object.MdYyInfoOpr, error) {
-	comm := NewCommon()
-	rows, err := comm.GetRowsBySQL(r.dbConfig, sqlGetLstMdYyInfoOpr)
+	rows, err := goToolMSSqlHelper.GetRowsBySQL(r.dbConfig, sqlGetLstMdYyInfoOpr)
 	if err != nil {
 		return nil, err
 	}
@@ -225,13 +220,11 @@ func (r *repOnline) GetLstMdYyInfoOpr() (*object.MdYyInfoOpr, error) {
 }
 
 func (r *repOnline) DelLstMdYyInfoOpr(sn int) error {
-	comm := NewCommon()
-	return comm.SetRowsBySQL(r.dbConfig, sqlDelLstMdYyInfoOpr, sn)
+	return goToolMSSqlHelper.SetRowsBySQL(r.dbConfig, sqlDelLstMdYyInfoOpr, sn)
 }
 
 func (r *repOnline) GetLstZxKcOpr() (*object.ZxKcOpr, error) {
-	comm := NewCommon()
-	rows, err := comm.GetRowsBySQL(r.dbConfig, sqlGetLstZxKcOpr)
+	rows, err := goToolMSSqlHelper.GetRowsBySQL(r.dbConfig, sqlGetLstZxKcOpr)
 	if err != nil {
 		return nil, err
 	}
@@ -270,6 +263,5 @@ func (r *repOnline) GetLstZxKcOpr() (*object.ZxKcOpr, error) {
 }
 
 func (r *repOnline) DelLstZxKcOpr(sn int) error {
-	comm := NewCommon()
-	return comm.SetRowsBySQL(r.dbConfig, sqlDelLstZxKcOpr, sn)
+	return goToolMSSqlHelper.SetRowsBySQL(r.dbConfig, sqlDelLstZxKcOpr, sn)
 }

@@ -3,20 +3,18 @@ package worker
 import (
 	"errors"
 	"fmt"
+	"github.com/Deansquirrel/goServiceSupportHelper"
 	"github.com/Deansquirrel/goToolCommon"
 	"github.com/Deansquirrel/goToolCron"
+	"github.com/Deansquirrel/goToolMSSqlHelper"
+	"github.com/Deansquirrel/goToolSVRV3"
+	"github.com/Deansquirrel/goZ9MdDataTrans/global"
 	"github.com/Deansquirrel/goZ9MdDataTrans/object"
 	"github.com/Deansquirrel/goZ9MdDataTrans/repository"
-	"runtime/debug"
-	"strings"
+	"time"
 )
 
 import log "github.com/Deansquirrel/goToolLog"
-
-const (
-	//TODO 钉钉机器人消息Key待参数化
-	webHook = "7685d3a4b1630c8cb0028ee9cd17beae1578869f8ddf0b7871ecbb8b0743f8ce"
-)
 
 type common struct {
 }
@@ -25,142 +23,221 @@ func NewCommon() *common {
 	return &common{}
 }
 
-//启动工作线程
-func (c *common) StartWorker(key object.TaskKey) {
-	var err error
-	var cronStr string
-	defer func() {
-		if err != nil {
-			c.HandleErr(key, err)
+func (c *common) StartService(sType object.RunMode) {
+	log.Debug(fmt.Sprintf("RunMode %s", sType))
+	for {
+		r := c.checkSysConfig()
+		if r {
+			break
 		} else {
-			log.Debug(fmt.Sprintf("start worker %s cron %s", key, cronStr))
+			time.Sleep(time.Minute * 30)
+		}
+	}
+	log.Debug(fmt.Sprintf("dbName: %s", global.SysConfig.MdDB.DbName))
+	go func() {
+		goServiceSupportHelper.SetOtherInfo(
+			repository.NewCommon().GetMdDbConfig(),
+			1,
+			true)
+	}()
+	switch sType {
+	case object.RunModeMdCollect:
+		c.addMdWorker()
+	case object.RunModeBbRestore:
+		c.addBbWorker()
+	default:
+		log.Warn(fmt.Sprintf("unknown runmode %v", sType))
+		global.Cancel()
+	}
+}
+
+//系统配置检查
+func (c *common) checkSysConfig() bool {
+	if global.SysConfig.OnLineConfig.Address == "" {
+		log.Error("线上库地址不能为空")
+		global.Cancel()
+		return false
+	}
+	err := c.refreshLocalDbConfig()
+	if err != nil {
+		return false
+	}
+	return true
+}
+
+func (c *common) refreshLocalDbConfig() error {
+	port := -1
+	appType := ""
+	clientType := ""
+
+	switch object.RunMode(global.SysConfig.RunMode.Mode) {
+	case object.RunModeMdCollect:
+		port = 7083
+		appType = "83"
+		clientType = "8301"
+	case object.RunModeBbRestore:
+		port = 7091
+		appType = "91"
+		clientType = "9101"
+	default:
+		errMsg := fmt.Sprintf("unexpected runmode %s", global.SysConfig.RunMode.Mode)
+		log.Error(errMsg)
+		global.Cancel()
+		return errors.New(errMsg)
+	}
+
+	dbConfig, err := goToolSVRV3.GetSQLConfig(global.SysConfig.SvrV3Info.Address, port, appType, clientType)
+	if err != nil {
+		errMsg := fmt.Sprintf("get dbConfig from svr v3 err: %s", err.Error())
+		log.Error(errMsg)
+		return errors.New(errMsg)
+	}
+
+	if dbConfig == nil {
+		errMsg := fmt.Sprintf("get dbConfig from svr v3 return nil")
+		log.Error(errMsg)
+		return errors.New(errMsg)
+	}
+
+	accList, err := goToolSVRV3.GetAccountList(goToolMSSqlHelper.ConvertDbConfigTo2000(dbConfig), appType)
+	if err != nil {
+		errMsg := fmt.Sprintf("get acc list err: %s", err.Error())
+		log.Error(errMsg)
+		return errors.New(errMsg)
+	}
+
+	if accList == nil || len(accList) <= 0 {
+		errMsg := "acc list is empty"
+		log.Error(errMsg)
+		return errors.New(errMsg)
+	}
+
+	global.SysConfig.MdDB.Server = dbConfig.Server
+	global.SysConfig.MdDB.Port = dbConfig.Port
+	global.SysConfig.MdDB.User = dbConfig.User
+	global.SysConfig.MdDB.Pwd = dbConfig.Pwd
+
+	if global.SysConfig.MdDB.DbName != "" {
+		flag := false
+		for _, acc := range accList {
+			if acc == global.SysConfig.MdDB.DbName {
+				flag = true
+				break
+			}
+		}
+		if !flag {
+			log.Warn(fmt.Sprintf("db [%s] is not a effective acc", global.SysConfig.MdDB.DbName))
+			global.SysConfig.MdDB.DbName = ""
+		}
+	}
+	if global.SysConfig.MdDB.DbName == "" {
+		global.SysConfig.MdDB.DbName = accList[0]
+	}
+	if global.SysConfig.MdDB.DbName == "" {
+		errMsg := fmt.Sprintf("无可用账套")
+		log.Error(errMsg)
+		return errors.New(errMsg)
+	}
+	return nil
+}
+
+func (c *common) panicHandle(v interface{}) {
+	log.Error(fmt.Sprintf("panicHandle: %s", v))
+}
+
+func (c *common) addWorker(key string, cmd func()) {
+	go func() {
+		for {
+			repOnline, err := repository.NewRepOnline()
+			if err != nil {
+				errMsg := fmt.Sprintf("add job [%s] cron error: %s", key, err.Error())
+				log.Error(errMsg)
+				time.Sleep(time.Minute)
+				continue
+			}
+			cron, err := repOnline.GetTaskCron(object.TaskKey(key))
+			if err != nil {
+				errMsg := fmt.Sprintf("add job [%s] cron error: %s", key, err.Error())
+				log.Error(errMsg)
+				time.Sleep(time.Minute)
+				continue
+			}
+			if cron != "" {
+				err = goToolCron.AddFunc(key, cron, c.getWorkerFuncReal(key, cmd), c.panicHandle)
+				if err != nil {
+					errMsg := fmt.Sprintf("add job [%s] error: %s", key, err.Error())
+					log.Error(errMsg)
+					time.Sleep(time.Minute)
+					continue
+				}
+			} else {
+				log.Warn(fmt.Sprintf("job [%s] cron is empty", key))
+			}
+			break
 		}
 	}()
-	repOnline, err := repository.NewRepOnline()
-	if err != nil {
-		return
-	}
-	cronStr, err = repOnline.GetTaskCron(key)
-	if err != nil {
-		return
-	}
-	cronStr = strings.Trim(cronStr, " ")
-	if cronStr == "" {
-		err = errors.New(fmt.Sprintf("task %s start err: cron is empty", key))
-		return
-	}
-
-	err = goToolCron.AddFunc(string(key), cronStr, c.getWorkerFuncReal(key), c.GetHandlePanic(key))
 }
 
-//停止工作线程
-func (c *common) StopWorker(key object.TaskKey) {
-	defer log.Debug(fmt.Sprintf("stop worker %s", key))
-	goToolCron.Stop(string(key))
+func (c *common) addCommonWorker() {
+	log.Debug("add common worker")
+	cWorker := NewCommonWorker()
+	c.addWorker("RefreshHeartBeat", cWorker.RefreshHeartBeat)
+	c.addWorker("RefreshConfig", cWorker.RefreshConfig)
 }
 
-func (c *common) getWorkerFuncReal(key object.TaskKey) func() {
+func (c *common) addMdWorker() {
+	log.Debug("add md worker")
+	c.addCommonWorker()
+	mdWorker := NewMdWorker()
+	c.addWorker("RefreshZxKc", mdWorker.UpdateZxKc)
+	c.addWorker("RefreshMdYyInfo", mdWorker.UpdateMdYyInfo)
+}
+
+func (c *common) addBbWorker() {
+	log.Debug("add bb worker")
+	c.addCommonWorker()
+	bbWorker := NewBbWorker()
+	c.addWorker("RestoreZxKc", bbWorker.RestoreZxKc)
+	c.addWorker("RestoreMdYyInfo", bbWorker.RestoreMdYyInfo)
+}
+
+func (c *common) RestartWorker(key string) {
+	if goToolCron.HasTask(key) {
+		goToolCron.Stop(key)
+		goToolCron.DelFunc(key)
+	}
+	switch key {
+	case "RefreshConfig":
+		cWorker := NewCommonWorker()
+		c.addWorker("RefreshConfig", cWorker.RefreshConfig)
+	case "RefreshHeartBeat":
+		cWorker := NewCommonWorker()
+		c.addWorker("RefreshHeartBeat", cWorker.RefreshHeartBeat)
+	case "RefreshMdYyInfo":
+		mdWorker := NewMdWorker()
+		c.addWorker("RefreshMdYyInfo", mdWorker.UpdateMdYyInfo)
+	case "RefreshZxKc":
+		bbWorker := NewBbWorker()
+		c.addWorker("RefreshZxKc", bbWorker.RestoreZxKc)
+	case "RestoreMdYyInfo":
+		bbWorker := NewBbWorker()
+		c.addWorker("RestoreMdYyInfo", bbWorker.RestoreMdYyInfo)
+	case "RestoreZxKc":
+		bbWorker := NewBbWorker()
+		c.addWorker("RestoreZxKc", bbWorker.RestoreZxKc)
+	default:
+		log.Warn(fmt.Sprintf("unknown task key %s", key))
+	}
+}
+
+func (c *common) getWorkerFuncReal(key string, cmd func()) func() {
 	return func() {
 		guid := goToolCommon.Guid()
 
 		log.Debug(fmt.Sprintf("task %s[%s] start", key, guid))
 		defer log.Debug(fmt.Sprintf("task %s[%s] complete", key, guid))
 
-		f := c.getWorkerFunc(key)
-		if f != nil {
-			f()
-		} else {
-			errMsg := fmt.Sprintf("task %s[%s] start err: func is nil", key, guid)
-			c.HandleErr(key, errors.New(errMsg))
-			return
-		}
+		f := goServiceSupportHelper.NewJob().FormatSSJob(key, cmd)
+		f()
 	}
-}
-
-//获取任务执行函数
-func (c *common) getWorkerFunc(key object.TaskKey) func() {
-	switch key {
-	case object.TaskKeyRefreshConfig:
-		return NewCommonWorker().RefreshConfig
-	case object.TaskKeyRefreshHeartBeat:
-		return NewOnlineWorker().RefreshHeartBeat
-	case object.TaskKeyRefreshMdYyInfo:
-		return NewOnlineWorker().UpdateMdYyInfo
-	case object.TaskKeyRefreshZxKc:
-		return NewOnlineWorker().UpdateZxKc
-	case object.TaskKeyRestoreMdYyInfo:
-		return NewBbWorker().RestoreMdYyInfo
-	case object.TaskKeyRestoreZxKc:
-		return NewBbWorker().RestoreZxKc
-	default:
-		return nil
-	}
-}
-
-//	switch key {
-//	case object.TaskKeyHeartBeat:
-//		c.startHeartBeat(errHandle)
-//	case object.TaskKeyRefreshMdDataTransState:
-//		c.startRefreshMdDataTransState(errHandle)
-//	case object.TaskKeyRestoreMdYyStateTransTime:
-//		c.startRestoreMdYyStateTransTime(errHandle)
-//	case object.TaskKeyRefreshWaitRestoreDataCount:
-//		c.startRefreshWaitRestoreDataCount(errHandle)
-//	case object.TaskKeyRestoreMdYyStateRestoreTime:
-//		c.startRestoreMdYyStateRestoreTime(errHandle)
-//	case object.TaskKeyRestoreMdYyState:
-//		c.startRestoreMdYyState(errHandle)
-//	case object.TaskKeyRestoreMdSet:
-//		c.startRestoreMdSet(errHandle)
-//	case object.TaskKeyRestoreCwGsSet:
-//		c.startRestoreCwGsSet(errHandle)
-//	case object.TaskKeyRestoreMdCwGsRef:
-//		c.startRestoreMdCwGsRef(errHandle)
-//	case object.TaskKeyRefreshConfig:
-//		c.StartRefreshConfig(errHandle)
-//	default:
-//		errMsg := fmt.Sprintf("unknow task key: %s", key)
-//		log.Error(errMsg)
-//		c.errChan <- errors.New(errMsg)
-//	}
-
-//task错误处理
-func (c *common) HandleErr(key object.TaskKey, err error) {
-	if err != nil {
-		log.Error(err.Error())
-		c.sendMsg(err.Error())
-	}
-}
-
-//发送钉钉消息
-func (c *common) sendMsg(msg string) {
-	log.Warn(msg)
-	//dt := object.NewDingTalkRobot(&object.DingTalkRobotConfigData{
-	//	FWebHookKey: webHook,
-	//	FAtMobiles:  "",
-	//	FIsAtAll:    0,
-	//})
-	//sendErr := dt.SendMsg(msg)
-	//if sendErr != nil {
-	//	log.Error(fmt.Sprintf("send msg error,msg: %s, error: %s", msg, sendErr.Error()))
-	//}
-}
-
-func (c *common) GetHandlePanic(key object.TaskKey) func(interface{}) {
-	return func(err interface{}) {
-		c.handlePanic(key, err)
-	}
-}
-
-func (c *common) handlePanic(key object.TaskKey, err interface{}) {
-	errMsg := fmt.Sprintf("task [%s] recover get err: %s", key, err)
-	c.HandleErr(key, errors.New(errMsg))
-	log.Error(string(debug.Stack()))
-}
-
-func (c *common) StartDelay() {
-	//启动延迟，错峰运行
-	//delaySecond := goToolCommon.RandInt(1, 60)
-	//log.Debug(fmt.Sprintf("启动延迟[%d]秒", delaySecond))
-	//time.Sleep(time.Duration(1000 * 1000 * 1000 * delaySecond))
 }

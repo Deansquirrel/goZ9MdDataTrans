@@ -3,6 +3,7 @@ package object
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/Deansquirrel/goToolSecret"
 	"strings"
 )
 
@@ -12,9 +13,11 @@ import log "github.com/Deansquirrel/goToolLog"
 type SystemConfig struct {
 	Total        systemConfigTotal        `toml:"total"`
 	OnLineConfig systemConfigOnLineConfig `toml:"onLineConfig"`
+	SvrV3Info    systemConfigSvrV3Info    `toml:"svrV3Info"`
 	MdDB         systemConfigMdDB         `toml:"mdDb"`
 	RunMode      systemConfigRunMode      `toml:"runMode"`
 	Service      systemConfigService      `toml:"service"`
+	SSConfig     systemConfigSSConfig     `tom;:"ssConfig"`
 }
 
 func (sc *SystemConfig) FormatConfig() {
@@ -22,6 +25,8 @@ func (sc *SystemConfig) FormatConfig() {
 	sc.OnLineConfig.FormatConfig()
 	sc.MdDB.FormatConfig()
 	sc.Service.FormatConfig()
+	sc.SvrV3Info.FormatConfig()
+	sc.SSConfig.FormatConfig()
 }
 
 func (sc *SystemConfig) ToString() string {
@@ -120,5 +125,35 @@ func (sc *systemConfigService) FormatConfig() {
 	}
 	if sc.Description == "" {
 		sc.Description = sc.Name
+	}
+}
+
+type systemConfigSSConfig struct {
+	Address string `toml:"address"`
+}
+
+//格式化
+func (sc *systemConfigSSConfig) FormatConfig() {
+	sc.Address = strings.Trim(sc.Address, " ")
+	if sc.Address != "" {
+		address, err := goToolSecret.DecryptFromBase64Format(sc.Address, "ServiceSupport")
+		if err != nil {
+			log.Error(fmt.Sprintf("convert address err: %s", err.Error()))
+			sc.Address = ""
+		} else {
+			sc.Address = address
+		}
+	}
+}
+
+//SvrV3服务器地址
+type systemConfigSvrV3Info struct {
+	Address string `toml:"address"`
+}
+
+func (c *systemConfigSvrV3Info) FormatConfig() {
+	c.Address = strings.Trim(c.Address, " ")
+	if c.Address == "" {
+		c.Address = "127.0.0.1"
 	}
 }

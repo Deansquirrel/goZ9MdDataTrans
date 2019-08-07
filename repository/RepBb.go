@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/Deansquirrel/goToolCommon"
 	"github.com/Deansquirrel/goToolMSSql2000"
+	"github.com/Deansquirrel/goToolMSSqlHelper"
 	"github.com/Deansquirrel/goZ9MdDataTrans/object"
 	"time"
 )
@@ -49,14 +50,13 @@ type repBb struct {
 func NewRepBb() *repBb {
 	c := common{}
 	return &repBb{
-		dbConfig: c.ConvertDbConfigTo2000(c.GetMdDbConfig()),
+		dbConfig: goToolMSSqlHelper.ConvertDbConfigTo2000(c.GetMdDbConfig()),
 	}
 }
 
 //获取zlCompany信息
 func (r *repBb) GetZlCompany() (*object.ZlCompany, error) {
-	comm := NewCommon()
-	rows, err := comm.GetRowsBySQL2000(r.dbConfig, sqlGetBBZlCompany)
+	rows, err := goToolMSSqlHelper.GetRowsBySQL2000(r.dbConfig, sqlGetBBZlCompany)
 	if err != nil {
 		errMsg := fmt.Sprintf("get zlcompany err: %s", err.Error())
 		log.Error(errMsg)
@@ -103,8 +103,7 @@ func (r *repBb) GetZlCompany() (*object.ZlCompany, error) {
 }
 
 func (r *repBb) RestoreMdYyInfo(opr *object.MdYyInfoOpr) error {
-	comm := NewCommon()
-	return comm.SetRowsBySQL2000(r.dbConfig, sqlRestoreMdYyInfo,
+	return goToolMSSqlHelper.SetRowsBySQL2000(r.dbConfig, sqlRestoreMdYyInfo,
 		opr.FMdId,
 		goToolCommon.GetDateStr(opr.FYyr),
 		opr.FTc,
@@ -121,8 +120,7 @@ func (r *repBb) RestoreMdYyInfo(opr *object.MdYyInfoOpr) error {
 }
 
 func (r *repBb) RestoreZxKc(opr *object.ZxKcOpr) error {
-	comm := NewCommon()
-	return comm.SetRowsBySQL2000(r.dbConfig, sqlRestoreZxKc,
+	return goToolMSSqlHelper.SetRowsBySQL2000(r.dbConfig, sqlRestoreZxKc,
 		opr.FMdId,
 		opr.FHpId,
 		opr.FSl,

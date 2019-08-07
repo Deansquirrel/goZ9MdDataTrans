@@ -9,6 +9,7 @@ const (
 	//PreVersion = "0.0.5 Build20190723"
 	//TestVersion = "0.0.0 Build20190101"
 	Version = "0.0.0 Build20190101"
+	Type    = "Z9MdDataTrans"
 )
 
 const SecretKey = "Z9MdDataTrans"

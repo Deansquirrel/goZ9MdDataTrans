@@ -4,12 +4,19 @@ stdOut=false
 # 日志输出级别 debug、info、warn、error
 logLevel="warn"
 
+[ssConfig]
+address=""
+
 [runMode]
 # 运行模式,MdCollect|BbRestore
 mode=""
 
 [onLineConfig]
 # 线上连接信息
+address=""
+
+[svrV3Info]
+# 服务器地址，如 127.0.0.1
 address=""
 
 [mdDb]

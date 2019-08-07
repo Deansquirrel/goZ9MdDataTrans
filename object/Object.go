@@ -11,13 +11,6 @@ type TaskCron struct {
 	Cron            string  //任务执行cron公式
 }
 
-//钉钉消息发送配置
-type DingTalkRobotConfigData struct {
-	FWebHookKey string
-	FAtMobiles  string
-	FIsAtAll    int
-}
-
 //ZlCompany
 type ZlCompany struct {
 	FCoId          int       //分支机构ID

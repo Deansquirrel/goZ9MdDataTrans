@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/Deansquirrel/goToolCommon"
 	"github.com/Deansquirrel/goToolMSSql2000"
+	"github.com/Deansquirrel/goToolMSSqlHelper"
 	"github.com/Deansquirrel/goZ9MdDataTrans/object"
 	"time"
 )
@@ -35,14 +36,13 @@ type repMd struct {
 func NewRepMd() *repMd {
 	c := common{}
 	return &repMd{
-		dbConfig: c.ConvertDbConfigTo2000(c.GetMdDbConfig()),
+		dbConfig: goToolMSSqlHelper.ConvertDbConfigTo2000(c.GetMdDbConfig()),
 	}
 }
 
 //获取zlCompany信息
 func (r *repMd) GetZlCompany() (*object.ZlCompany, error) {
-	comm := NewCommon()
-	rows, err := comm.GetRowsBySQL2000(r.dbConfig, sqlGetMdZlCompany)
+	rows, err := goToolMSSqlHelper.GetRowsBySQL2000(r.dbConfig, sqlGetMdZlCompany)
 	if err != nil {
 		errMsg := fmt.Sprintf("get zlcompany err: %s", err.Error())
 		log.Error(errMsg)
@@ -89,8 +89,7 @@ func (r *repMd) GetZlCompany() (*object.ZlCompany, error) {
 }
 
 func (r *repMd) GetMdYyInfo() ([]*object.MdYyInfo, error) {
-	comm := NewCommon()
-	rows, err := comm.GetRowsBySQL2000(r.dbConfig, sqlGetMdYyInfo)
+	rows, err := goToolMSSqlHelper.GetRowsBySQL2000(r.dbConfig, sqlGetMdYyInfo)
 	if err != nil {
 		errMsg := fmt.Sprintf("get tc info err: %s", err.Error())
 		log.Error(errMsg)
@@ -127,14 +126,13 @@ func (r *repMd) GetMdYyInfo() ([]*object.MdYyInfo, error) {
 }
 
 func (r *repMd) GetZxKcInfo(lst time.Time) ([]*object.ZxKc, time.Time, error) {
-	comm := NewCommon()
 	//log.Debug(goToolCommon.GetDateTimeStrWithMillisecond(lst))
-	rows, err := comm.GetRowsBySQL2000(r.dbConfig, sqlGetZxKcInfo,
+	rows, err := goToolMSSqlHelper.GetRowsBySQL2000(r.dbConfig, sqlGetZxKcInfo,
 		goToolCommon.GetDateTimeStrWithMillisecond(lst))
 	if err != nil {
 		errMsg := fmt.Sprintf("get zxkc err: %s", err.Error())
 		log.Error(errMsg)
-		return nil, NewCommon().GetDefaultOprTime(), errors.New(errMsg)
+		return nil, goToolMSSqlHelper.GetDefaultOprTime(), errors.New(errMsg)
 	}
 	defer func() {
 		_ = rows.Close()
@@ -149,7 +147,7 @@ func (r *repMd) GetZxKcInfo(lst time.Time) ([]*object.ZxKc, time.Time, error) {
 		if err != nil {
 			errMsg := fmt.Sprintf("read zxkc err: %s", err.Error())
 			log.Error(errMsg)
-			return nil, NewCommon().GetDefaultOprTime(), errors.New(errMsg)
+			return nil, goToolMSSqlHelper.GetDefaultOprTime(), errors.New(errMsg)
 		}
 		rList = append(rList, &object.ZxKc{
 			FHpId:    fHpId,
@@ -163,7 +161,7 @@ func (r *repMd) GetZxKcInfo(lst time.Time) ([]*object.ZxKc, time.Time, error) {
 	if rows.Err() != nil {
 		errMsg := fmt.Sprintf("read zxkc err: %s", rows.Err().Error())
 		log.Error(errMsg)
-		return nil, NewCommon().GetDefaultOprTime(), errors.New(errMsg)
+		return nil, goToolMSSqlHelper.GetDefaultOprTime(), errors.New(errMsg)
 	}
 	return rList, newLst, nil
 }
