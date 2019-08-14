@@ -37,7 +37,7 @@ func (c *common) StartService(sType object.RunMode) {
 		goServiceSupportHelper.SetOtherInfo(
 			repository.NewCommon().GetMdDbConfig(),
 			1,
-			true)
+			goServiceSupportHelper.SVRV3)
 	}()
 	switch sType {
 	case object.RunModeMdCollect:
