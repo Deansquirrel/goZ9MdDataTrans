@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"github.com/Deansquirrel/goServiceSupportHelper"
-	"github.com/Deansquirrel/goToolCommon"
 	"github.com/Deansquirrel/goToolCron"
 	"github.com/Deansquirrel/goToolMSSqlHelper"
 	"github.com/Deansquirrel/goToolSVRV3"
@@ -145,7 +144,7 @@ func (c *common) panicHandle(v interface{}) {
 	log.Error(fmt.Sprintf("panicHandle: %s", v))
 }
 
-func (c *common) addWorker(key string, cmd func()) {
+func (c *common) addWorker(key string, cmd func(id string)) {
 	go func() {
 		for {
 			repOnline, err := repository.NewRepOnline()
@@ -230,14 +229,14 @@ func (c *common) RestartWorker(key string) {
 	}
 }
 
-func (c *common) getWorkerFuncReal(key string, cmd func()) func() {
-	return func() {
-		guid := goToolCommon.Guid()
+func (c *common) getWorkerFuncReal(key string, cmd func(id string)) func() {
+	return goServiceSupportHelper.NewJob().FormatSSJob(key, c.formatWorkFunc(key, cmd))
+}
 
-		log.Debug(fmt.Sprintf("task %s[%s] start", key, guid))
-		defer log.Debug(fmt.Sprintf("task %s[%s] complete", key, guid))
-
-		f := goServiceSupportHelper.NewJob().FormatSSJob(key, cmd)
-		f()
+func (c *common) formatWorkFunc(key string, cmd func(id string)) func(string) {
+	return func(id string) {
+		log.Debug(fmt.Sprintf("task %s[%s] start", key, id))
+		defer log.Debug(fmt.Sprintf("task %s[%s] complete", key, id))
+		cmd(id)
 	}
 }

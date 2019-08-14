@@ -3,6 +3,7 @@ package worker
 import (
 	"errors"
 	"fmt"
+	"github.com/Deansquirrel/goServiceSupportHelper"
 	"github.com/Deansquirrel/goToolCron"
 	"github.com/Deansquirrel/goZ9MdDataTrans/global"
 	"github.com/Deansquirrel/goZ9MdDataTrans/object"
@@ -19,7 +20,7 @@ func NewCommonWorker() *commonWorker {
 }
 
 //刷新并检查任务配置
-func (w *commonWorker) RefreshConfig() {
+func (w *commonWorker) RefreshConfig(id string) {
 	log.Debug("RefreshConfig")
 	checkList := make([]string, 0)
 	checkList = append(checkList, w.getCommonTaskKeyList()...)
@@ -29,11 +30,16 @@ func (w *commonWorker) RefreshConfig() {
 	case object.RunModeBbRestore:
 		checkList = append(checkList, w.getBbTaskKeyList()...)
 	default:
-		log.Warn(fmt.Sprintf("unknown runmode %s", global.SysConfig.RunMode.Mode))
+		errMsg := fmt.Sprintf("unknown runmode %s", global.SysConfig.RunMode.Mode)
+		log.Warn(errMsg)
+		_ = goServiceSupportHelper.JobErrRecord(id, errMsg)
+		return
 	}
 	repOnline, err := repository.NewRepOnline()
 	if err != nil {
-		log.Error(fmt.Sprintf("get rep online error: %s", err.Error()))
+		errMsg := fmt.Sprintf("get rep online error: %s", err.Error())
+		log.Error(errMsg)
+		_ = goServiceSupportHelper.JobErrRecord(id, errMsg)
 		return
 	}
 	for _, id := range checkList {
@@ -42,7 +48,9 @@ func (w *commonWorker) RefreshConfig() {
 		}
 		configStr, err := repOnline.GetTaskCron(object.TaskKey(id))
 		if err != nil {
-			log.Error(fmt.Sprintf("get [%s] config cron error: %s", id, err.Error()))
+			errMsg := fmt.Sprintf("get [%s] config cron error: %s", id, err.Error())
+			log.Error(errMsg)
+			_ = goServiceSupportHelper.JobErrRecord(id, errMsg)
 			return
 		}
 		currCron := goToolCron.CronStr(id)
@@ -74,36 +82,37 @@ func (w *commonWorker) getBbTaskKeyList() []string {
 }
 
 //刷新心跳时间
-func (w *commonWorker) RefreshHeartBeat() {
+func (w *commonWorker) RefreshHeartBeat(id string) {
 	log.Debug("刷新心跳时间")
 	repMd := repository.NewRepMd()
 	zlCompany, err := repMd.GetZlCompany()
 	if err != nil {
-		w.refreshHeartBeatHandleErr(err)
+		w.refreshHeartBeatHandleErr(id, err)
 		return
 	}
 	if zlCompany == nil {
 		errMsg := "ZlCompany is nil"
-		w.refreshHeartBeatHandleErr(errors.New(errMsg))
+		w.refreshHeartBeatHandleErr(id, errors.New(errMsg))
 		return
 	}
 	repOnline, err := repository.NewRepOnline()
 	if err != nil {
-		w.refreshHeartBeatHandleErr(err)
+		w.refreshHeartBeatHandleErr(id, err)
 		return
 	}
 	if repOnline == nil {
 		errMsg := "repOnline is nil"
-		w.refreshHeartBeatHandleErr(errors.New(errMsg))
+		w.refreshHeartBeatHandleErr(id, errors.New(errMsg))
 		return
 	}
 	err = repOnline.UpdateHeartBeat(zlCompany)
 	if err != nil {
-		w.refreshHeartBeatHandleErr(err)
+		w.refreshHeartBeatHandleErr(id, err)
 		return
 	}
 }
 
-func (w *commonWorker) refreshHeartBeatHandleErr(err error) {
+func (w *commonWorker) refreshHeartBeatHandleErr(id string, err error) {
 	log.Error(err.Error())
+	_ = goServiceSupportHelper.JobErrRecord(id, err.Error())
 }

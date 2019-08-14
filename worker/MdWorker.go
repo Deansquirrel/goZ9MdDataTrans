@@ -1,6 +1,7 @@
 package worker
 
 import (
+	"github.com/Deansquirrel/goServiceSupportHelper"
 	"github.com/Deansquirrel/goToolMSSqlHelper"
 	"github.com/Deansquirrel/goZ9MdDataTrans/repository"
 	"time"
@@ -21,17 +22,19 @@ func NewMdWorker() *mdWorker {
 	return &mdWorker{}
 }
 
-func (w *mdWorker) UpdateMdYyInfo() {
+func (w *mdWorker) UpdateMdYyInfo(id string) {
 	log.Debug("刷新门店营业信息")
 	repMd := repository.NewRepMd()
 	repOnline, err := repository.NewRepOnline()
 	if err != nil {
 		log.Error(err.Error())
+		_ = goServiceSupportHelper.JobErrRecord(id, err.Error())
 		return
 	}
 	list, err := repMd.GetMdYyInfo()
 	if err != nil {
 		log.Error(err.Error())
+		_ = goServiceSupportHelper.JobErrRecord(id, err.Error())
 		return
 	}
 
@@ -39,36 +42,42 @@ func (w *mdWorker) UpdateMdYyInfo() {
 		err = repOnline.UpdateMdYyInfo(info)
 		if err != nil {
 			log.Error(err.Error())
+			_ = goServiceSupportHelper.JobErrRecord(id, err.Error())
 		}
 	}
 }
 
-func (w *mdWorker) UpdateZxKc() {
+func (w *mdWorker) UpdateZxKc(id string) {
 	log.Debug("刷新最新库存变动")
 	repMd := repository.NewRepMd()
 	repOnline, err := repository.NewRepOnline()
 	if err != nil {
 		log.Error(err.Error())
+		_ = goServiceSupportHelper.JobErrRecord(id, err.Error())
 		return
 	}
 	kcList, lst, err := repMd.GetZxKcInfo(zxKcSj)
 	if err != nil {
 		log.Error(err.Error())
+		_ = goServiceSupportHelper.JobErrRecord(id, err.Error())
 		return
 	}
 	cInfo, err := repMd.GetZlCompany()
 	if err != nil {
 		log.Error(err.Error())
+		_ = goServiceSupportHelper.JobErrRecord(id, err.Error())
 		return
 	}
 	err = repOnline.UpdateZxKc(cInfo.FCoId, kcList)
 	if err != nil {
 		log.Error(err.Error())
+		_ = goServiceSupportHelper.JobErrRecord(id, err.Error())
 		return
 	}
 	err = repOnline.UpdateKcLastUpdate(cInfo.FCoId)
 	if err != nil {
 		log.Error(err.Error())
+		_ = goServiceSupportHelper.JobErrRecord(id, err.Error())
 		return
 	}
 	zxKcSj = lst

@@ -1,6 +1,7 @@
 package worker
 
 import (
+	"github.com/Deansquirrel/goServiceSupportHelper"
 	"github.com/Deansquirrel/goZ9MdDataTrans/repository"
 )
 
@@ -17,27 +18,31 @@ func NewBbWorker() *bbWorker {
 }
 
 //恢复MdYyInfo
-func (w *bbWorker) RestoreMdYyInfo() {
+func (w *bbWorker) RestoreMdYyInfo(id string) {
 	repOnline, err := repository.NewRepOnline()
 	if err != nil {
 		log.Error(err.Error())
+		_ = goServiceSupportHelper.JobErrRecord(id, err.Error())
 		return
 	}
 	if repOnline == nil {
 		errMsg := "repOnline is nil"
 		log.Error(errMsg)
+		_ = goServiceSupportHelper.JobErrRecord(id, errMsg)
 		return
 	}
 	repBb := repository.NewRepBb()
 	if repBb == nil {
 		errMsg := "repBb is nil"
 		log.Error(errMsg)
+		_ = goServiceSupportHelper.JobErrRecord(id, errMsg)
 		return
 	}
 	for {
 		opr, err := repOnline.GetLstMdYyInfoOpr()
 		if err != nil {
 			log.Error(err.Error())
+			_ = goServiceSupportHelper.JobErrRecord(id, err.Error())
 			return
 		}
 		if opr == nil {
@@ -46,38 +51,44 @@ func (w *bbWorker) RestoreMdYyInfo() {
 		err = repBb.RestoreMdYyInfo(opr)
 		if err != nil {
 			log.Error(err.Error())
+			_ = goServiceSupportHelper.JobErrRecord(id, err.Error())
 			return
 		}
 		err = repOnline.DelLstMdYyInfoOpr(opr.FOprSn)
 		if err != nil {
 			log.Error(err.Error())
+			_ = goServiceSupportHelper.JobErrRecord(id, err.Error())
 			return
 		}
 	}
 }
 
 //恢复ZxKc
-func (w *bbWorker) RestoreZxKc() {
+func (w *bbWorker) RestoreZxKc(id string) {
 	repOnline, err := repository.NewRepOnline()
 	if err != nil {
 		log.Error(err.Error())
+		_ = goServiceSupportHelper.JobErrRecord(id, err.Error())
 		return
 	}
 	if repOnline == nil {
 		errMsg := "repOnline is nil"
 		log.Error(errMsg)
+		_ = goServiceSupportHelper.JobErrRecord(id, errMsg)
 		return
 	}
 	repBb := repository.NewRepBb()
 	if repBb == nil {
 		errMsg := "repBb is nil"
 		log.Error(errMsg)
+		_ = goServiceSupportHelper.JobErrRecord(id, errMsg)
 		return
 	}
 	for {
 		opr, err := repOnline.GetLstZxKcOpr()
 		if err != nil {
 			log.Error(err.Error())
+			_ = goServiceSupportHelper.JobErrRecord(id, err.Error())
 			return
 		}
 		if opr == nil {
@@ -86,11 +97,13 @@ func (w *bbWorker) RestoreZxKc() {
 		err = repBb.RestoreZxKc(opr)
 		if err != nil {
 			log.Error(err.Error())
+			_ = goServiceSupportHelper.JobErrRecord(id, err.Error())
 			return
 		}
 		err = repOnline.DelLstZxKcOpr(opr.FOprSn)
 		if err != nil {
 			log.Error(err.Error())
+			_ = goServiceSupportHelper.JobErrRecord(id, err.Error())
 			return
 		}
 	}
